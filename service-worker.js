@@ -1,4 +1,4 @@
-const CACHE_NAME = 'liste-courses-v1';
+const CACHE_NAME = 'liste-courses-v2'; // Incrémentez ce numéro à chaque mise à jour
 const urlsToCache = [
   './liste-courses.html',
   './manifest.json',
@@ -9,6 +9,9 @@ const urlsToCache = [
 // Installation du Service Worker
 self.addEventListener('install', function(event) {
   console.log('[Service Worker] Installation en cours...');
+  // Force le nouveau service worker à s'activer immédiatement
+  self.skipWaiting();
+  
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(function(cache) {
@@ -31,38 +34,39 @@ self.addEventListener('activate', function(event) {
           }
         })
       );
+    }).then(function() {
+      // Prend le contrôle immédiatement
+      return self.clients.claim();
     })
   );
 });
 
-// Interception des requêtes
+// Interception des requêtes - Strategy: Network First, then Cache
 self.addEventListener('fetch', function(event) {
   event.respondWith(
-    caches.match(event.request)
+    fetch(event.request)
       .then(function(response) {
-        // Cache hit - retourne la réponse en cache
-        if (response) {
-          return response;
+        // Si la réponse réseau est valide, on la met en cache
+        if (response && response.status === 200) {
+          var responseToCache = response.clone();
+          caches.open(CACHE_NAME).then(function(cache) {
+            cache.put(event.request, responseToCache);
+          });
         }
-
-        return fetch(event.request).then(
-          function(response) {
-            // Vérifie si la réponse est valide
-            if(!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
-            }
-
-            // Clone la réponse
-            var responseToCache = response.clone();
-
-            caches.open(CACHE_NAME)
-              .then(function(cache) {
-                cache.put(event.request, responseToCache);
-              });
-
-            return response;
-          }
-        );
+        return response;
+      })
+      .catch(function() {
+        // Si le réseau échoue, on utilise le cache
+        return caches.match(event.request).then(function(response) {
+          return response || new Response('Offline - contenu non disponible');
+        });
       })
   );
+});
+
+// Envoyer un message quand une nouvelle version est disponible
+self.addEventListener('message', function(event) {
+  if (event.data.action === 'skipWaiting') {
+    self.skipWaiting();
+  }
 });

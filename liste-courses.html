@@ -506,6 +506,58 @@
             background: rgba(255, 255, 255, 0.3);
         }
 
+        /* Update notification banner */
+        .update-banner {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #667eea;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 50px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            display: none;
+            align-items: center;
+            gap: 15px;
+            z-index: 3000;
+            animation: slideUp 0.3s;
+        }
+
+        .update-banner.show {
+            display: flex;
+        }
+
+        .update-banner-text {
+            font-weight: 600;
+        }
+
+        .update-btn {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .update-btn:hover {
+            transform: scale(1.05);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
         /* Meals section */
         .meals-section {
             padding: 20px;
@@ -988,6 +1040,12 @@
             </button>
             <button class="modal-cancel" onclick="closeSettingsModal()">Fermer</button>
         </div>
+    </div>
+
+    <!-- Update notification banner -->
+    <div id="updateBanner" class="update-banner">
+        <span class="update-banner-text">✨ Nouvelle mise à jour disponible !</span>
+        <button class="update-btn" onclick="updateApp()">Mettre à jour</button>
     </div>
 
     <!-- Firebase SDKs -->
@@ -2381,16 +2439,57 @@
         });
 
         // Register Service Worker for PWA
+        let swRegistration = null;
+
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
                 navigator.serviceWorker.register('service-worker.js')
                     .then(function(registration) {
-                        console.log('Service Worker enregistré avec succès:', registration.scope);
+                        console.log('✅ Service Worker enregistré:', registration.scope);
+                        swRegistration = registration;
+
+                        // Vérifier les mises à jour toutes les minutes
+                        setInterval(function() {
+                            registration.update();
+                        }, 60000);
+
+                        // Détecter quand une nouvelle version est en attente
+                        registration.addEventListener('updatefound', function() {
+                            const newWorker = registration.installing;
+                            
+                            newWorker.addEventListener('statechange', function() {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // Nouvelle version disponible !
+                                    console.log('🔔 Nouvelle mise à jour disponible !');
+                                    showUpdateBanner();
+                                }
+                            });
+                        });
                     })
                     .catch(function(error) {
-                        console.log('Échec de l\'enregistrement du Service Worker:', error);
+                        console.log('❌ Échec enregistrement Service Worker:', error);
                     });
+
+                // Rafraîchir quand le nouveau service worker prend le contrôle
+                let refreshing = false;
+                navigator.serviceWorker.addEventListener('controllerchange', function() {
+                    if (!refreshing) {
+                        refreshing = true;
+                        window.location.reload();
+                    }
+                });
             });
+        }
+
+        function showUpdateBanner() {
+            document.getElementById('updateBanner').classList.add('show');
+        }
+
+        function updateApp() {
+            if (swRegistration && swRegistration.waiting) {
+                // Dire au service worker en attente de prendre le contrôle
+                swRegistration.waiting.postMessage({ action: 'skipWaiting' });
+            }
         }
     </script>
 </body>
