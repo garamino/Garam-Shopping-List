@@ -592,6 +592,15 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
+            overflow: hidden;
+            max-height: 5000px;
+            transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+            opacity: 1;
+        }
+
+        .meals-list.collapsed {
+            max-height: 0;
+            opacity: 0;
         }
 
         .meal-item {
@@ -913,11 +922,12 @@
         </div>
 
         <div class="meals-section">
-            <div class="meals-header">
+            <div class="meals-header" onclick="toggleMealsSection()" style="cursor: pointer; user-select: none;">
                 <div class="meals-title">
                     🍽️ Mes Plats
+                    <span class="category-chevron" id="mealsChevron" style="margin-left: 10px; font-size: 14px; transition: transform 0.3s;">▼</span>
                 </div>
-                <button class="add-meal-btn" onclick="openMealModal()">+ Nouveau plat</button>
+                <button class="add-meal-btn" onclick="event.stopPropagation(); openMealModal()">+ Nouveau plat</button>
             </div>
             <div class="meals-list" id="mealsList"></div>
         </div>
@@ -1212,15 +1222,21 @@
         let searchTerm = '';
         let collapsedCategories = {};
         let meals = {};
+        let mealsCollapsed = false;
 
         // Initialize with some default items
         async function initializeDefaultItems() {
             const savedCollapsed = localStorage.getItem('collapsedCategories');
             const saved = localStorage.getItem('groceryList');
             const savedMeals = localStorage.getItem('meals');
+            const savedMealsCollapsed = localStorage.getItem('mealsCollapsed');
             
             if (savedCollapsed) {
                 collapsedCategories = JSON.parse(savedCollapsed);
+            }
+
+            if (savedMealsCollapsed !== null) {
+                mealsCollapsed = savedMealsCollapsed === 'true';
             }
 
             // Try to load from Firebase first (only works on HTTPS)
@@ -1445,6 +1461,7 @@
             localStorage.setItem('groceryList', JSON.stringify(groceryList));
             localStorage.setItem('collapsedCategories', JSON.stringify(collapsedCategories));
             localStorage.setItem('meals', JSON.stringify(meals));
+            localStorage.setItem('mealsCollapsed', mealsCollapsed.toString());
             
             // Save to Firebase
             saveToFirebase();
@@ -1784,6 +1801,28 @@
                     </div>
                 `;
             }).join('');
+
+            // Apply collapsed state
+            updateMealsCollapseState();
+        }
+
+        function toggleMealsSection() {
+            mealsCollapsed = !mealsCollapsed;
+            saveToLocalStorage();
+            updateMealsCollapseState();
+        }
+
+        function updateMealsCollapseState() {
+            const mealsList = document.getElementById('mealsList');
+            const chevron = document.getElementById('mealsChevron');
+            
+            if (mealsCollapsed) {
+                mealsList.classList.add('collapsed');
+                if (chevron) chevron.classList.add('collapsed');
+            } else {
+                mealsList.classList.remove('collapsed');
+                if (chevron) chevron.classList.remove('collapsed');
+            }
         }
 
         function openMealModal() {
