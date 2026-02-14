@@ -506,56 +506,36 @@
             background: rgba(255, 255, 255, 0.3);
         }
 
-        /* Update notification banner */
-        .update-banner {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #667eea;
-            color: white;
-            padding: 15px 25px;
-            border-radius: 50px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-            display: none;
+        /* Update status icon */
+        .update-status {
+            display: inline-flex;
             align-items: center;
-            gap: 15px;
-            z-index: 3000;
-            animation: slideUp 0.3s;
-        }
-
-        .update-banner.show {
-            display: flex;
-        }
-
-        .update-banner-text {
-            font-weight: 600;
-        }
-
-        .update-btn {
-            background: white;
-            color: #667eea;
-            border: none;
-            padding: 8px 20px;
-            border-radius: 20px;
-            font-weight: 600;
+            gap: 8px;
             cursor: pointer;
-            transition: transform 0.2s;
+            padding: 5px 12px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            transition: all 0.3s;
+            margin-left: 10px;
+            font-size: 12px;
         }
 
-        .update-btn:hover {
-            transform: scale(1.05);
+        .update-status:hover {
+            background: rgba(255, 255, 255, 0.2);
         }
 
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateX(-50%) translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(-50%) translateY(0);
-            }
+        .update-status-icon {
+            font-size: 16px;
+            animation: none;
+        }
+
+        .update-status-icon.checking {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
 
         /* Meals section */
@@ -894,7 +874,13 @@
         <div class="header">
             <button class="settings-btn" onclick="openSettingsModal()" title="Paramètres">⚙️</button>
             <h1>🛒 Ma Liste de Courses</h1>
-            <p>Organisez vos achats facilement</p>
+            <p>
+                Organisez vos achats facilement
+                <span class="update-status" onclick="checkForUpdates()" title="Vérifier les mises à jour">
+                    <span class="update-status-icon" id="updateStatusIcon">✅</span>
+                    <span id="updateStatusText">À jour</span>
+                </span>
+            </p>
             <div id="syncStatus" style="font-size: 12px; margin-top: 10px; opacity: 0.8;">
                 <span id="syncIcon">☁️</span> <span id="syncText">Synchronisation...</span>
             </div>
@@ -1040,12 +1026,6 @@
             </button>
             <button class="modal-cancel" onclick="closeSettingsModal()">Fermer</button>
         </div>
-    </div>
-
-    <!-- Update notification banner -->
-    <div id="updateBanner" class="update-banner">
-        <span class="update-banner-text">✨ Nouvelle mise à jour disponible !</span>
-        <button class="update-btn" onclick="updateApp()">Mettre à jour</button>
     </div>
 
     <!-- Firebase SDKs -->
@@ -2440,6 +2420,7 @@
 
         // Register Service Worker for PWA
         let swRegistration = null;
+        let updateAvailable = false;
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
@@ -2448,10 +2429,10 @@
                         console.log('✅ Service Worker enregistré:', registration.scope);
                         swRegistration = registration;
 
-                        // Vérifier les mises à jour toutes les minutes
+                        // Vérifier les mises à jour toutes les 5 minutes
                         setInterval(function() {
                             registration.update();
-                        }, 60000);
+                        }, 300000); // 5 minutes
 
                         // Détecter quand une nouvelle version est en attente
                         registration.addEventListener('updatefound', function() {
@@ -2461,13 +2442,21 @@
                                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                                     // Nouvelle version disponible !
                                     console.log('🔔 Nouvelle mise à jour disponible !');
-                                    showUpdateBanner();
+                                    updateAvailable = true;
+                                    setUpdateStatus('available');
                                 }
                             });
                         });
+
+                        // Vérification initiale
+                        if (registration.waiting) {
+                            updateAvailable = true;
+                            setUpdateStatus('available');
+                        }
                     })
                     .catch(function(error) {
                         console.log('❌ Échec enregistrement Service Worker:', error);
+                        setUpdateStatus('error');
                     });
 
                 // Rafraîchir quand le nouveau service worker prend le contrôle
@@ -2481,8 +2470,71 @@
             });
         }
 
-        function showUpdateBanner() {
-            document.getElementById('updateBanner').classList.add('show');
+        function setUpdateStatus(status) {
+            const iconEl = document.getElementById('updateStatusIcon');
+            const textEl = document.getElementById('updateStatusText');
+            
+            if (!iconEl || !textEl) return;
+            
+            switch(status) {
+                case 'checking':
+                    iconEl.textContent = '🔄';
+                    iconEl.classList.add('checking');
+                    textEl.textContent = 'Vérification...';
+                    break;
+                case 'uptodate':
+                    iconEl.textContent = '✅';
+                    iconEl.classList.remove('checking');
+                    textEl.textContent = 'À jour';
+                    break;
+                case 'available':
+                    iconEl.textContent = '🔔';
+                    iconEl.classList.remove('checking');
+                    textEl.textContent = 'Mise à jour !';
+                    break;
+                case 'error':
+                    iconEl.textContent = '⚠️';
+                    iconEl.classList.remove('checking');
+                    textEl.textContent = 'Erreur';
+                    break;
+            }
+        }
+
+        async function checkForUpdates() {
+            if (!swRegistration) {
+                alert('Service Worker non disponible. Assurez-vous d\'utiliser l\'app depuis GitHub Pages.');
+                return;
+            }
+
+            setUpdateStatus('checking');
+
+            try {
+                // Forcer la vérification
+                await swRegistration.update();
+                
+                // Attendre un peu pour laisser le temps au service worker de se mettre à jour
+                setTimeout(function() {
+                    if (swRegistration.waiting || updateAvailable) {
+                        // Mise à jour disponible
+                        setUpdateStatus('available');
+                        
+                        if (confirm('✨ Une nouvelle version est disponible !\n\nVoulez-vous mettre à jour maintenant ?\n\n(Vos données seront conservées)')) {
+                            updateApp();
+                        }
+                    } else {
+                        // Déjà à jour
+                        setUpdateStatus('uptodate');
+                        
+                        // Remettre l'icône normale après 2 secondes
+                        setTimeout(function() {
+                            setUpdateStatus('uptodate');
+                        }, 2000);
+                    }
+                }, 1000);
+            } catch (error) {
+                console.error('Erreur lors de la vérification:', error);
+                setUpdateStatus('error');
+            }
         }
 
         function updateApp() {
