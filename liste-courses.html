@@ -733,6 +733,9 @@
         <div class="header">
             <h1>🛒 Ma Liste de Courses</h1>
             <p>Organisez vos achats facilement</p>
+            <div id="syncStatus" style="font-size: 12px; margin-top: 10px; opacity: 0.8;">
+                <span id="syncIcon">☁️</span> <span id="syncText">Synchronisation...</span>
+            </div>
         </div>
 
         <div class="controls">
@@ -833,7 +836,60 @@
         </div>
     </div>
 
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
     <script>
+        // ========================================
+        // FIREBASE CONFIGURATION
+        // ========================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyDm7wU6xLy_QHVeHFwczSH5lOPTMT9yZrY",
+            authDomain: "liste-course-8c2cf.firebaseapp.com",
+            projectId: "liste-course-8c2cf",
+            storageBucket: "liste-course-8c2cf.firebasestorage.app",
+            messagingSenderId: "426451396001",
+            appId: "1:426451396001:web:4789552edad9f52f5c97e0"
+        };
+
+        // Initialize Firebase
+        let db = null;
+        let userId = null;
+        let isFirebaseReady = false;
+
+        // Generate or retrieve user ID
+        function getUserId() {
+            let uid = localStorage.getItem('userId');
+            if (!uid) {
+                uid = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('userId', uid);
+            }
+            return uid;
+        }
+
+        // Initialize Firebase when the page loads
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+            userId = getUserId();
+            
+            // Check if we're on HTTPS (Firebase requires it)
+            if (window.location.protocol === 'https:') {
+                isFirebaseReady = true;
+                console.log('✅ Firebase initialisé (HTTPS détecté)');
+            } else {
+                isFirebaseReady = false;
+                console.log('⚠️ Firebase désactivé (HTTPS requis). Utilisation localStorage uniquement.');
+            }
+        } catch (error) {
+            console.error('❌ Erreur Firebase:', error);
+            isFirebaseReady = false;
+        }
+
+        // ========================================
+        // APPLICATION DATA
+        // ========================================
         const CATEGORIES = {
             'fruits': { name: 'Fruits', icon: '🍎', items: [] },
             'legumes': { name: 'Légumes', icon: '🥬', items: [] },
@@ -855,15 +911,26 @@
         let meals = {};
 
         // Initialize with some default items
-        function initializeDefaultItems() {
-            const saved = localStorage.getItem('groceryList');
+        async function initializeDefaultItems() {
             const savedCollapsed = localStorage.getItem('collapsedCategories');
+            const saved = localStorage.getItem('groceryList');
             const savedMeals = localStorage.getItem('meals');
             
             if (savedCollapsed) {
                 collapsedCategories = JSON.parse(savedCollapsed);
             }
 
+            // Try to load from Firebase first (only works on HTTPS)
+            const loadedFromFirebase = await loadFromFirebase();
+            
+            if (loadedFromFirebase) {
+                console.log('✅ Données chargées depuis Firebase');
+                return;
+            }
+
+            // If no Firebase data, load from localStorage
+            console.log('📂 Chargement depuis localStorage...');
+            
             if (savedMeals) {
                 meals = JSON.parse(savedMeals);
             }
@@ -1071,9 +1138,107 @@
         }
 
         function saveToLocalStorage() {
+            // Save to localStorage (backup)
             localStorage.setItem('groceryList', JSON.stringify(groceryList));
             localStorage.setItem('collapsedCategories', JSON.stringify(collapsedCategories));
             localStorage.setItem('meals', JSON.stringify(meals));
+            
+            // Save to Firebase
+            saveToFirebase();
+        }
+
+        async function saveToFirebase() {
+            if (!isFirebaseReady || !db || !userId) {
+                console.log('Firebase non disponible, sauvegarde locale uniquement');
+                updateSyncStatus('offline');
+                return;
+            }
+
+            try {
+                updateSyncStatus('syncing');
+                
+                const dataToSave = {
+                    groceryList: groceryList,
+                    meals: meals,
+                    collapsedCategories: collapsedCategories,
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                };
+
+                await db.collection('users').doc(userId).set(dataToSave, { merge: true });
+                console.log('✅ Données sauvegardées sur Firebase');
+                updateSyncStatus('synced');
+            } catch (error) {
+                console.error('❌ Erreur de sauvegarde Firebase:', error);
+                updateSyncStatus('error');
+            }
+        }
+
+        function updateSyncStatus(status) {
+            const iconEl = document.getElementById('syncIcon');
+            const textEl = document.getElementById('syncText');
+            
+            if (!iconEl || !textEl) return;
+            
+            switch(status) {
+                case 'syncing':
+                    iconEl.textContent = '🔄';
+                    textEl.textContent = 'Synchronisation...';
+                    break;
+                case 'synced':
+                    iconEl.textContent = '✅';
+                    textEl.textContent = 'Sauvegardé dans le cloud';
+                    setTimeout(() => {
+                        iconEl.textContent = '☁️';
+                        textEl.textContent = 'Connecté';
+                    }, 2000);
+                    break;
+                case 'offline':
+                    iconEl.textContent = '💾';
+                    textEl.textContent = 'Sauvegarde locale uniquement';
+                    break;
+                case 'error':
+                    iconEl.textContent = '⚠️';
+                    textEl.textContent = 'Erreur de synchronisation';
+                    break;
+            }
+        }
+
+        async function loadFromFirebase() {
+            if (!isFirebaseReady || !db || !userId) {
+                console.log('Firebase non disponible, chargement depuis localStorage');
+                updateSyncStatus('offline');
+                return false;
+            }
+
+            try {
+                updateSyncStatus('syncing');
+                const doc = await db.collection('users').doc(userId).get();
+                
+                if (doc.exists) {
+                    const data = doc.data();
+                    console.log('📥 Données chargées depuis Firebase');
+                    
+                    if (data.groceryList) groceryList = data.groceryList;
+                    if (data.meals) meals = data.meals;
+                    if (data.collapsedCategories) collapsedCategories = data.collapsedCategories;
+                    
+                    // Save to localStorage as backup
+                    localStorage.setItem('groceryList', JSON.stringify(groceryList));
+                    localStorage.setItem('meals', JSON.stringify(meals));
+                    localStorage.setItem('collapsedCategories', JSON.stringify(collapsedCategories));
+                    
+                    updateSyncStatus('synced');
+                    return true;
+                } else {
+                    console.log('Aucune donnée Firebase, utilisation localStorage');
+                    updateSyncStatus('offline');
+                    return false;
+                }
+            } catch (error) {
+                console.error('❌ Erreur de chargement Firebase:', error);
+                updateSyncStatus('error');
+                return false;
+            }
         }
 
         function toggleCategory(categoryKey) {
@@ -1894,9 +2059,11 @@
         });
 
         // Initialize
-        initializeDefaultItems();
-        renderCategories();
-        renderMeals();
+        (async function() {
+            await initializeDefaultItems();
+            renderCategories();
+            renderMeals();
+        })();
 
         // Close modal when clicking outside
         window.onclick = function(event) {
