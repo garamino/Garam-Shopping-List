@@ -365,6 +365,13 @@
             animation: slideDown 0.2s;
         }
 
+        .item-dropdown.open-upward {
+            top: auto;
+            bottom: 100%;
+            margin-top: 0;
+            margin-bottom: 5px;
+        }
+
         .item-dropdown-item {
             padding: 12px 16px;
             cursor: pointer;
@@ -1774,7 +1781,11 @@
                 const moreText = ingredientCount > 3 ? ` +${ingredientCount - 3} autres` : '';
 
                 return `
-                    <div class="meal-item ${meal.selected ? 'selected' : ''}" id="meal-${mealId}">
+                    <div class="meal-item ${meal.selected ? 'selected' : ''}" 
+                         id="meal-${mealId}"
+                         draggable="true"
+                         data-meal-id="${mealId}">
+                        <span class="drag-handle" style="cursor: grab; color: #adb5bd; margin-right: 8px;">⋮⋮</span>
                         <input type="checkbox" class="meal-checkbox" 
                                ${meal.selected ? 'checked' : ''}
                                onchange="toggleMeal(${mealId})">
@@ -1804,6 +1815,9 @@
 
             // Apply collapsed state
             updateMealsCollapseState();
+            
+            // Initialize drag and drop for meals
+            initializeMealsDragAndDrop();
         }
 
         function toggleMealsSection() {
@@ -1973,6 +1987,7 @@
             document.querySelectorAll('.item-dropdown').forEach(dropdown => {
                 if (dropdown.id !== menuId) {
                     dropdown.classList.remove('show');
+                    dropdown.classList.remove('open-upward');
                 }
             });
             
@@ -1986,11 +2001,27 @@
             // Toggle current menu
             menu.classList.toggle('show');
             button.classList.toggle('active');
+            
+            // Check if menu should open upward
+            if (menu.classList.contains('show')) {
+                setTimeout(() => {
+                    const rect = menu.getBoundingClientRect();
+                    const viewportHeight = window.innerHeight;
+                    
+                    // If menu would be cut off at bottom, open upward
+                    if (rect.bottom > viewportHeight - 20) {
+                        menu.classList.add('open-upward');
+                    } else {
+                        menu.classList.remove('open-upward');
+                    }
+                }, 10);
+            }
         }
 
         function closeAllMealMenus() {
             document.querySelectorAll('.item-dropdown').forEach(dropdown => {
                 dropdown.classList.remove('show');
+                dropdown.classList.remove('open-upward');
             });
             document.querySelectorAll('.item-menu-btn').forEach(btn => {
                 btn.classList.remove('active');
@@ -2137,6 +2168,7 @@
             document.querySelectorAll('.item-dropdown').forEach(dropdown => {
                 if (dropdown.id !== menuId) {
                     dropdown.classList.remove('show');
+                    dropdown.classList.remove('open-upward');
                 }
             });
             
@@ -2148,13 +2180,30 @@
             });
             
             // Toggle current menu
+            const isShowing = menu.classList.contains('show');
             menu.classList.toggle('show');
             button.classList.toggle('active');
+            
+            // Check if menu should open upward
+            if (menu.classList.contains('show')) {
+                setTimeout(() => {
+                    const rect = menu.getBoundingClientRect();
+                    const viewportHeight = window.innerHeight;
+                    
+                    // If menu would be cut off at bottom, open upward
+                    if (rect.bottom > viewportHeight - 20) {
+                        menu.classList.add('open-upward');
+                    } else {
+                        menu.classList.remove('open-upward');
+                    }
+                }, 10);
+            }
         }
 
         function closeAllMenus() {
             document.querySelectorAll('.item-dropdown').forEach(dropdown => {
                 dropdown.classList.remove('show');
+                dropdown.classList.remove('open-upward');
             });
             document.querySelectorAll('.item-menu-btn').forEach(btn => {
                 btn.classList.remove('active');
@@ -2366,6 +2415,89 @@
 
                 saveToLocalStorage();
                 renderCategories();
+            }
+
+            return false;
+        }
+
+        // Drag and drop for meals
+        let draggedMeal = null;
+
+        function initializeMealsDragAndDrop() {
+            const mealItems = document.querySelectorAll('.meal-item[draggable="true"]');
+            
+            mealItems.forEach(item => {
+                item.addEventListener('dragstart', handleMealDragStart);
+                item.addEventListener('dragend', handleMealDragEnd);
+                item.addEventListener('dragover', handleMealDragOver);
+                item.addEventListener('drop', handleMealDrop);
+                item.addEventListener('dragleave', handleMealDragLeave);
+            });
+        }
+
+        function handleMealDragStart(e) {
+            draggedMeal = e.target;
+            e.target.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', e.target.innerHTML);
+        }
+
+        function handleMealDragEnd(e) {
+            e.target.classList.remove('dragging');
+            document.querySelectorAll('.meal-item').forEach(item => {
+                item.classList.remove('drag-over');
+            });
+        }
+
+        function handleMealDragOver(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            e.dataTransfer.dropEffect = 'move';
+            
+            if (e.target.classList.contains('meal-item') || e.target.closest('.meal-item')) {
+                const mealItem = e.target.classList.contains('meal-item') ? e.target : e.target.closest('.meal-item');
+                mealItem.classList.add('drag-over');
+            }
+            
+            return false;
+        }
+
+        function handleMealDragLeave(e) {
+            const mealItem = e.target.classList.contains('meal-item') ? e.target : e.target.closest('.meal-item');
+            if (mealItem) {
+                mealItem.classList.remove('drag-over');
+            }
+        }
+
+        function handleMealDrop(e) {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+
+            const target = e.target.closest('.meal-item');
+            if (draggedMeal && target && draggedMeal !== target) {
+                const draggedMealId = draggedMeal.dataset.mealId;
+                const targetMealId = target.dataset.mealId;
+
+                // Get all meal IDs in current order
+                const mealIds = Object.keys(meals);
+                const draggedIndex = mealIds.indexOf(draggedMealId);
+                const targetIndex = mealIds.indexOf(targetMealId);
+
+                // Reorder meals
+                const newMeals = {};
+                const reorderedIds = [...mealIds];
+                const [removed] = reorderedIds.splice(draggedIndex, 1);
+                reorderedIds.splice(targetIndex, 0, removed);
+
+                reorderedIds.forEach(id => {
+                    newMeals[id] = meals[id];
+                });
+
+                meals = newMeals;
+                saveToLocalStorage();
+                renderMeals();
             }
 
             return false;
