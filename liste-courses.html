@@ -614,6 +614,25 @@
             overflow: hidden;
         }
 
+        /* Articles section */
+        .articles-section {
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .articles-content {
+            max-height: 10000px;
+            overflow: visible;
+            transition: max-height 0.4s ease-out, opacity 0.4s ease-out;
+            opacity: 1;
+        }
+
+        .articles-content.collapsed {
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+
         .meal-item {
             display: flex;
             align-items: center;
@@ -945,42 +964,66 @@
             <div class="meals-list" id="mealsList"></div>
         </div>
 
-        <div class="add-item">
-            <div class="add-form">
-                <div class="add-inputs">
-                    <input type="text" class="add-input" id="newItemInput" placeholder="Nouvel article...">
-                    <select class="add-select" id="categorySelect">
-                        <option value="fruits">🍎 Fruits</option>
-                        <option value="legumes">🥬 Légumes</option>
-                        <option value="viande">🥩 Viande</option>
-                        <option value="poisson">🐟 Poisson</option>
-                        <option value="produits-laitiers">🥛 Produits Laitiers</option>
-                        <option value="epicerie">🥫 Épicerie</option>
-                        <option value="boulangerie">🥖 Boulangerie</option>
-                        <option value="surgeles">❄️ Surgelés</option>
-                        <option value="boissons">🥤 Boissons</option>
-                        <option value="hygiene">🧴 Hygiène & Entretien</option>
-                        <option value="autre">📦 Autre</option>
-                    </select>
+        <div class="articles-section">
+            <div class="articles-header" onclick="toggleArticlesSection()" style="cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between; padding: 20px; background: #f8f9fa; border-bottom: 1px solid #e9ecef;">
+                <div class="articles-title" style="font-size: 18px; font-weight: 600; color: #333; display: flex; align-items: center; gap: 10px;">
+                    📦 Mes Articles
+                    <span class="category-chevron" id="articlesChevron" style="margin-left: 10px; font-size: 14px; transition: transform 0.3s;">▼</span>
                 </div>
-                <button class="add-btn" id="addBtn">Ajouter</button>
             </div>
-        </div>
+            <div class="articles-content" id="articlesContent">
+                <div class="controls">
+                    <div class="search-row">
+                        <input type="text" class="search-box" id="searchBox" placeholder="🔍 Rechercher un article...">
+                        <button class="collapse-all-btn" id="collapseAllBtn" onclick="toggleAllCategories()" title="Replier/Déplier tout">
+                            ⬍
+                        </button>
+                    </div>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-filter="all">Tout</button>
+                        <button class="filter-btn" data-filter="checked">À acheter</button>
+                        <button class="filter-btn" data-filter="active">Non sélectionnés</button>
+                    </div>
+                </div>
 
-        <div id="categoriesContainer"></div>
+                <div class="add-item">
+                    <div class="add-form">
+                        <div class="add-inputs">
+                            <input type="text" class="add-input" id="newItemInput" placeholder="Nouvel article...">
+                            <select class="add-select" id="categorySelect">
+                                <option value="fruits">🍎 Fruits</option>
+                                <option value="legumes">🥬 Légumes</option>
+                                <option value="viande">🥩 Viande</option>
+                                <option value="poisson">🐟 Poisson</option>
+                                <option value="produits-laitiers">🥛 Produits Laitiers</option>
+                                <option value="epicerie">🥫 Épicerie</option>
+                                <option value="boulangerie">🥖 Boulangerie</option>
+                                <option value="surgeles">❄️ Surgelés</option>
+                                <option value="boissons">🥤 Boissons</option>
+                                <option value="hygiene">🧴 Hygiène & Entretien</option>
+                                <option value="autre">📦 Autre</option>
+                            </select>
+                        </div>
+                        <button class="add-btn" id="addBtn">Ajouter</button>
+                    </div>
+                </div>
 
-        <div class="stats">
-            <div class="stat">
-                <div class="stat-value" id="totalItems">0</div>
-                <div class="stat-label">Total</div>
-            </div>
-            <div class="stat">
-                <div class="stat-value" id="checkedItems">0</div>
-                <div class="stat-label">À acheter</div>
-            </div>
-            <div class="stat">
-                <div class="stat-value" id="remainingItems">0</div>
-                <div class="stat-label">Non sélectionnés</div>
+                <div id="categoriesContainer"></div>
+
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-value" id="totalItems">0</div>
+                        <div class="stat-label">Total</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="checkedItems">0</div>
+                        <div class="stat-label">À acheter</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="remainingItems">0</div>
+                        <div class="stat-label">Non sélectionnés</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1236,6 +1279,7 @@
         let collapsedCategories = {};
         let meals = {};
         let mealsCollapsed = false;
+        let articlesCollapsed = false;
 
         // Initialize with some default items
         async function initializeDefaultItems() {
@@ -1243,6 +1287,7 @@
             const saved = localStorage.getItem('groceryList');
             const savedMeals = localStorage.getItem('meals');
             const savedMealsCollapsed = localStorage.getItem('mealsCollapsed');
+            const savedArticlesCollapsed = localStorage.getItem('articlesCollapsed');
             
             if (savedCollapsed) {
                 collapsedCategories = JSON.parse(savedCollapsed);
@@ -1250,6 +1295,10 @@
 
             if (savedMealsCollapsed !== null) {
                 mealsCollapsed = savedMealsCollapsed === 'true';
+            }
+
+            if (savedArticlesCollapsed !== null) {
+                articlesCollapsed = savedArticlesCollapsed === 'true';
             }
 
             // Try to load from Firebase first (only works on HTTPS)
@@ -1475,6 +1524,7 @@
             localStorage.setItem('collapsedCategories', JSON.stringify(collapsedCategories));
             localStorage.setItem('meals', JSON.stringify(meals));
             localStorage.setItem('mealsCollapsed', mealsCollapsed.toString());
+            localStorage.setItem('articlesCollapsed', articlesCollapsed.toString());
             
             // Save to Firebase
             saveToFirebase();
@@ -1841,6 +1891,25 @@
                 if (chevron) chevron.classList.add('collapsed');
             } else {
                 mealsList.classList.remove('collapsed');
+                if (chevron) chevron.classList.remove('collapsed');
+            }
+        }
+
+        function toggleArticlesSection() {
+            articlesCollapsed = !articlesCollapsed;
+            saveToLocalStorage();
+            updateArticlesCollapseState();
+        }
+
+        function updateArticlesCollapseState() {
+            const articlesContent = document.getElementById('articlesContent');
+            const chevron = document.getElementById('articlesChevron');
+            
+            if (articlesCollapsed) {
+                articlesContent.classList.add('collapsed');
+                if (chevron) chevron.classList.add('collapsed');
+            } else {
+                articlesContent.classList.remove('collapsed');
                 if (chevron) chevron.classList.remove('collapsed');
             }
         }
@@ -2555,6 +2624,7 @@
                 await initializeDefaultItems();
                 renderCategories();
                 renderMeals();
+                updateArticlesCollapseState();
             } else {
                 console.log('⏳ En attente de connexion...');
             }
