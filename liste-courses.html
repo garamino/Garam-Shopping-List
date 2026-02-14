@@ -397,6 +397,115 @@
             }
         }
 
+        /* Login/Auth Modal */
+        .auth-modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            animation: fadeIn 0.3s;
+        }
+
+        .auth-modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .auth-modal-content {
+            background: white;
+            padding: 40px 30px;
+            border-radius: 20px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            text-align: center;
+        }
+
+        .auth-modal-header {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .auth-modal-subtitle {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 30px;
+        }
+
+        .auth-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 16px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .auth-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .auth-button {
+            width: 100%;
+            padding: 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 10px;
+            transition: background 0.3s;
+        }
+
+        .auth-button:hover {
+            background: #5568d3;
+        }
+
+        .auth-button-secondary {
+            background: #6c757d;
+        }
+
+        .auth-button-secondary:hover {
+            background: #5a6268;
+        }
+
+        .auth-divider {
+            margin: 20px 0;
+            text-align: center;
+            color: #6c757d;
+            font-size: 14px;
+        }
+
+        .settings-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: background 0.3s;
+        }
+
+        .settings-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
         /* Meals section */
         .meals-section {
             padding: 20px;
@@ -731,6 +840,7 @@
 <body>
     <div class="container">
         <div class="header">
+            <button class="settings-btn" onclick="openSettingsModal()" title="Paramètres">⚙️</button>
             <h1>🛒 Ma Liste de Courses</h1>
             <p>Organisez vos achats facilement</p>
             <div id="syncStatus" style="font-size: 12px; margin-top: 10px; opacity: 0.8;">
@@ -836,6 +946,50 @@
         </div>
     </div>
 
+    <!-- Authentication Modal -->
+    <div id="authModal" class="auth-modal">
+        <div class="auth-modal-content">
+            <div class="auth-modal-header">🔐 Connexion</div>
+            <div class="auth-modal-subtitle">Entrez votre code personnel pour accéder à vos données</div>
+            <input type="text" class="auth-input" id="loginCodeInput" placeholder="Votre code" maxlength="30">
+            <button class="auth-button" onclick="loginWithCode()">Se connecter</button>
+            <div class="auth-divider">ou</div>
+            <button class="auth-button auth-button-secondary" onclick="showCreateAccount()">Créer un nouveau compte</button>
+        </div>
+    </div>
+
+    <!-- Create Account Modal -->
+    <div id="createAccountModal" class="auth-modal">
+        <div class="auth-modal-content">
+            <div class="auth-modal-header">✨ Nouveau compte</div>
+            <div class="auth-modal-subtitle">Choisissez un code personnel (minimum 4 caractères)</div>
+            <input type="text" class="auth-input" id="newCodeInput" placeholder="Votre code" maxlength="30">
+            <input type="text" class="auth-input" id="confirmCodeInput" placeholder="Confirmez le code" maxlength="30">
+            <button class="auth-button" onclick="createAccount()">Créer mon compte</button>
+            <button class="auth-button auth-button-secondary" onclick="backToLogin()">Retour</button>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">⚙️ Paramètres</div>
+            <div style="text-align: left; margin: 20px 0;">
+                <p style="margin-bottom: 10px;"><strong>Votre code personnel :</strong></p>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                    <code id="displayUserCode" style="font-size: 18px; font-weight: 600; color: #667eea;">---</code>
+                </div>
+                <p style="font-size: 13px; color: #6c757d; margin-bottom: 20px;">
+                    💡 Conservez ce code précieusement ! Il vous permet de récupérer vos données sur n'importe quel appareil.
+                </p>
+            </div>
+            <button class="modal-confirm" onclick="logout()" style="background: #dc3545; width: 100%; margin-bottom: 10px;">
+                🚪 Se déconnecter
+            </button>
+            <button class="modal-cancel" onclick="closeSettingsModal()">Fermer</button>
+        </div>
+    </div>
+
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -860,27 +1014,126 @@
 
         // Generate or retrieve user ID
         function getUserId() {
-            let uid = localStorage.getItem('userId');
+            let uid = localStorage.getItem('userCode');
             if (!uid) {
-                uid = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                localStorage.setItem('userId', uid);
+                // No code found, user needs to login or create account
+                return null;
             }
-            return uid;
+            // Hash the code for security (simple hash)
+            return 'user_' + btoa(uid).replace(/[^a-zA-Z0-9]/g, '');
+        }
+
+        function checkAuthStatus() {
+            const userCode = localStorage.getItem('userCode');
+            if (!userCode) {
+                // Show login modal
+                document.getElementById('authModal').classList.add('show');
+                return false;
+            }
+            return true;
+        }
+
+        function loginWithCode() {
+            const code = document.getElementById('loginCodeInput').value.trim();
+            
+            if (!code) {
+                alert('Veuillez entrer votre code');
+                return;
+            }
+
+            if (code.length < 4) {
+                alert('Le code doit contenir au moins 4 caractères');
+                return;
+            }
+
+            // Save the code
+            localStorage.setItem('userCode', code);
+            userId = getUserId();
+            
+            // Close modal
+            document.getElementById('authModal').classList.remove('show');
+            
+            // Reload data with new userId
+            location.reload();
+        }
+
+        function showCreateAccount() {
+            document.getElementById('authModal').classList.remove('show');
+            document.getElementById('createAccountModal').classList.add('show');
+        }
+
+        function backToLogin() {
+            document.getElementById('createAccountModal').classList.remove('show');
+            document.getElementById('authModal').classList.add('show');
+        }
+
+        function createAccount() {
+            const code = document.getElementById('newCodeInput').value.trim();
+            const confirmCode = document.getElementById('confirmCodeInput').value.trim();
+            
+            if (!code || !confirmCode) {
+                alert('Veuillez remplir tous les champs');
+                return;
+            }
+
+            if (code.length < 4) {
+                alert('Le code doit contenir au moins 4 caractères');
+                return;
+            }
+
+            if (code !== confirmCode) {
+                alert('Les codes ne correspondent pas');
+                return;
+            }
+
+            // Save the code
+            localStorage.setItem('userCode', code);
+            userId = getUserId();
+            
+            // Close modal
+            document.getElementById('createAccountModal').classList.remove('show');
+            
+            // Initialize app
+            location.reload();
+        }
+
+        function openSettingsModal() {
+            const userCode = localStorage.getItem('userCode');
+            document.getElementById('displayUserCode').textContent = userCode || 'Non défini';
+            document.getElementById('settingsModal').classList.add('show');
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').classList.remove('show');
+        }
+
+        function logout() {
+            if (confirm('Êtes-vous sûr de vouloir vous déconnecter ? Assurez-vous de connaître votre code pour vous reconnecter !')) {
+                localStorage.removeItem('userCode');
+                location.reload();
+            }
         }
 
         // Initialize Firebase when the page loads
         try {
             firebase.initializeApp(firebaseConfig);
             db = firebase.firestore();
-            userId = getUserId();
             
-            // Check if we're on HTTPS (Firebase requires it)
-            if (window.location.protocol === 'https:') {
-                isFirebaseReady = true;
-                console.log('✅ Firebase initialisé (HTTPS détecté)');
+            // Check if user is authenticated
+            if (!checkAuthStatus()) {
+                console.log('⏳ En attente de connexion utilisateur...');
+                // Don't set userId yet, wait for login
             } else {
-                isFirebaseReady = false;
-                console.log('⚠️ Firebase désactivé (HTTPS requis). Utilisation localStorage uniquement.');
+                userId = getUserId();
+                
+                // Check if we're on HTTPS (Firebase requires it)
+                if (window.location.protocol === 'https:') {
+                    isFirebaseReady = true;
+                    console.log('✅ Firebase initialisé (HTTPS détecté)');
+                } else {
+                    isFirebaseReady = false;
+                    console.log('⚠️ Firebase désactivé (HTTPS requis). Utilisation localStorage uniquement.');
+                }
             }
         } catch (error) {
             console.error('❌ Erreur Firebase:', error);
@@ -2060,9 +2313,14 @@
 
         // Initialize
         (async function() {
-            await initializeDefaultItems();
-            renderCategories();
-            renderMeals();
+            // Only initialize if user is authenticated
+            if (userId) {
+                await initializeDefaultItems();
+                renderCategories();
+                renderMeals();
+            } else {
+                console.log('⏳ En attente de connexion...');
+            }
         })();
 
         // Close modal when clicking outside
@@ -2070,6 +2328,7 @@
             const moveModal = document.getElementById('moveModal');
             const renameModal = document.getElementById('renameModal');
             const mealModal = document.getElementById('mealModal');
+            const settingsModal = document.getElementById('settingsModal');
             
             if (event.target === moveModal) {
                 closeMoveModal();
@@ -2079,6 +2338,9 @@
             }
             if (event.target === mealModal) {
                 closeMealModal();
+            }
+            if (event.target === settingsModal) {
+                closeSettingsModal();
             }
             
             // Close dropdowns when clicking outside
@@ -2094,6 +2356,25 @@
                 renameInput.addEventListener('keypress', function(e) {
                     if (e.key === 'Enter') {
                         confirmRename();
+                    }
+                });
+            }
+
+            // Auth modals Enter key handlers
+            const loginCodeInput = document.getElementById('loginCodeInput');
+            if (loginCodeInput) {
+                loginCodeInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        loginWithCode();
+                    }
+                });
+            }
+
+            const confirmCodeInput = document.getElementById('confirmCodeInput');
+            if (confirmCodeInput) {
+                confirmCodeInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        createAccount();
                     }
                 });
             }
