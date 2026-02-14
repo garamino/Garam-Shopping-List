@@ -953,20 +953,6 @@
             </div>
         </div>
 
-        <div class="controls">
-            <div class="search-row">
-                <input type="text" class="search-box" id="searchBox" placeholder="🔍 Rechercher un article...">
-                <button class="collapse-all-btn" id="collapseAllBtn" onclick="toggleAllCategories()" title="Replier/Déplier tout">
-                    ⬍
-                </button>
-            </div>
-            <div class="filter-buttons">
-                <button class="filter-btn active" data-filter="all">Tout</button>
-                <button class="filter-btn" data-filter="checked">À acheter</button>
-                <button class="filter-btn" data-filter="active">Non sélectionnés</button>
-            </div>
-        </div>
-
         <div class="meals-section">
             <div class="meals-header" onclick="toggleMealsSection()" style="cursor: pointer; user-select: none;">
                 <div class="meals-title">
@@ -987,6 +973,20 @@
                 <button class="add-meal-btn" onclick="event.stopPropagation(); openAddArticleModal()">+ Nouvel article</button>
             </div>
             <div class="articles-content" id="articlesContent">
+                <div class="controls">
+                    <div class="search-row">
+                        <input type="text" class="search-box" id="searchBox" placeholder="🔍 Rechercher un article...">
+                        <button class="collapse-all-btn" id="collapseAllBtn" onclick="toggleAllCategories()" title="Replier/Déplier tout">
+                            ⬍
+                        </button>
+                    </div>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-filter="all">Tout</button>
+                        <button class="filter-btn" data-filter="checked">À acheter</button>
+                        <button class="filter-btn" data-filter="active">Non sélectionnés</button>
+                    </div>
+                </div>
+
                 <div id="categoriesContainer"></div>
 
                 <div class="stats">
