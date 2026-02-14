@@ -42,11 +42,22 @@
             color: white;
             padding: 30px 20px;
             text-align: center;
+            position: relative;
         }
 
         .header h1 {
             font-size: 28px;
             margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .app-logo {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
         }
 
         .header p {
@@ -873,7 +884,10 @@
     <div class="container">
         <div class="header">
             <button class="settings-btn" onclick="openSettingsModal()" title="Paramètres">⚙️</button>
-            <h1>🛒 Ma Liste de Courses</h1>
+            <h1>
+                <img src="app-logo.png" alt="Logo" class="app-logo">
+                Ma Liste de Courses
+            </h1>
             <p>
                 Organisez vos achats facilement
                 <span class="update-status" onclick="checkForUpdates()" title="Vérifier les mises à jour">
