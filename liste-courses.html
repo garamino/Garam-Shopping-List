@@ -253,7 +253,6 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
-            overflow: hidden;
             max-height: 5000px;
             transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
             opacity: 1;
@@ -263,6 +262,7 @@
             max-height: 0;
             opacity: 0;
             margin-top: 0;
+            overflow: hidden;
         }
 
         .item {
@@ -274,10 +274,12 @@
             transition: all 0.3s;
             cursor: move;
             user-select: none;
+            position: relative;
         }
 
         .item:hover {
             background: #e9ecef;
+            z-index: 10;
         }
 
         .item.dragging {
@@ -354,7 +356,7 @@
             background: white;
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            z-index: 100;
+            z-index: 1000;
             min-width: 150px;
             display: none;
             overflow: hidden;
@@ -599,7 +601,6 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
-            overflow: hidden;
             max-height: 5000px;
             transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
             opacity: 1;
@@ -608,6 +609,7 @@
         .meals-list.collapsed {
             max-height: 0;
             opacity: 0;
+            overflow: hidden;
         }
 
         .meal-item {
@@ -618,10 +620,12 @@
             border-radius: 10px;
             transition: all 0.3s;
             border: 2px solid transparent;
+            position: relative;
         }
 
         .meal-item:hover {
             border-color: #667eea;
+            z-index: 10;
         }
 
         .meal-item.selected {
