@@ -1,0 +1,1949 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ma Liste de Courses</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Application de liste de courses intelligente avec gestion de plats">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Liste Courses">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .controls {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .search-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .search-box {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .collapse-all-btn {
+            padding: 12px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: 600;
+            transition: all 0.3s;
+            min-width: 50px;
+        }
+
+        .collapse-all-btn:hover {
+            background: #5568d3;
+        }
+
+        .collapse-all-btn.collapsed {
+            background: #6c757d;
+        }
+
+        .collapse-all-btn.collapsed:hover {
+            background: #5a6268;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid #e9ecef;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .add-item {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .add-form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .add-inputs {
+            display: flex;
+            gap: 10px;
+        }
+
+        .add-input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+
+        .add-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .add-select {
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 16px;
+            background: white;
+            cursor: pointer;
+        }
+
+        .add-btn {
+            width: 100%;
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .add-btn:hover {
+            background: #5568d3;
+        }
+
+        .category {
+            padding: 20px;
+        }
+
+        .category-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding: 10px;
+            border-bottom: 2px solid #e9ecef;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.3s;
+            border-radius: 10px;
+        }
+
+        .category-header:hover {
+            background: #f8f9fa;
+        }
+
+        .category-header.collapsed {
+            margin-bottom: 0;
+            border-bottom: none;
+        }
+
+        .category-icon {
+            font-size: 24px;
+        }
+
+        .category-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .category-count {
+            margin-left: auto;
+            background: #e9ecef;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .category-chevron {
+            font-size: 14px;
+            transition: transform 0.3s;
+            color: #6c757d;
+        }
+
+        .category-chevron.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .items-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow: hidden;
+            max-height: 5000px;
+            transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+            opacity: 1;
+        }
+
+        .items-list.collapsed {
+            max-height: 0;
+            opacity: 0;
+            margin-top: 0;
+        }
+
+        .item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            transition: all 0.3s;
+            cursor: move;
+            user-select: none;
+        }
+
+        .item:hover {
+            background: #e9ecef;
+        }
+
+        .item.dragging {
+            opacity: 0.5;
+            transform: scale(0.95);
+        }
+
+        .item.drag-over {
+            border-top: 3px solid #667eea;
+        }
+
+        .item.checked {
+            background: #e7f3ff;
+            border-left: 4px solid #667eea;
+        }
+
+        .item.checked .item-name {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .item-checkbox {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            margin-right: 12px;
+        }
+
+        .drag-handle {
+            margin-right: 8px;
+            color: #6c757d;
+            cursor: move;
+            font-size: 18px;
+        }
+
+        .item-name {
+            flex: 1;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .item-actions {
+            display: flex;
+            gap: 3px;
+            margin-left: auto;
+            position: relative;
+        }
+
+        .item-menu-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: background 0.3s;
+            line-height: 1;
+        }
+
+        .item-menu-btn:hover {
+            background: #5a6268;
+        }
+
+        .item-menu-btn.active {
+            background: #667eea;
+        }
+
+        .item-dropdown {
+            position: absolute;
+            right: 0;
+            top: 100%;
+            margin-top: 5px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 100;
+            min-width: 150px;
+            display: none;
+            overflow: hidden;
+        }
+
+        .item-dropdown.show {
+            display: block;
+            animation: slideDown 0.2s;
+        }
+
+        .item-dropdown-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .item-dropdown-item:hover {
+            background: #f8f9fa;
+        }
+
+        .item-dropdown-item.rename {
+            color: #28a745;
+        }
+
+        .item-dropdown-item.move {
+            color: #667eea;
+        }
+
+        .item-dropdown-item.delete {
+            color: #dc3545;
+            border-top: 1px solid #e9ecef;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Meals section */
+        .meals-section {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .meals-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .meals-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .add-meal-btn {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .add-meal-btn:hover {
+            background: #5568d3;
+        }
+
+        .meals-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .meal-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: white;
+            border-radius: 10px;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .meal-item:hover {
+            border-color: #667eea;
+        }
+
+        .meal-item.selected {
+            background: #e7f3ff;
+            border-color: #667eea;
+        }
+
+        .meal-checkbox {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            margin-right: 12px;
+        }
+
+        .meal-info {
+            flex: 1;
+        }
+
+        .meal-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .meal-ingredients {
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .meals-empty {
+            text-align: center;
+            padding: 30px;
+            color: #6c757d;
+        }
+
+        /* Meal creation modal */
+        .meal-modal-content {
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .ingredient-selector {
+            margin-bottom: 20px;
+        }
+
+        .ingredient-category {
+            margin-bottom: 15px;
+        }
+
+        .ingredient-category-header {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 8px;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .ingredient-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding-left: 10px;
+        }
+
+        .ingredient-checkbox-item {
+            display: flex;
+            align-items: center;
+            padding: 6px;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .ingredient-checkbox-item:hover {
+            background: #f8f9fa;
+        }
+
+        .ingredient-checkbox-item input[type="checkbox"] {
+            margin-right: 10px;
+        }
+
+        .ingredient-checkbox-item label {
+            cursor: pointer;
+            flex: 1;
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s;
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            animation: slideUp 0.3s;
+        }
+
+        .modal-header {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .modal-categories {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .modal-category-btn {
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            background: white;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .modal-category-btn:hover {
+            background: #f8f9fa;
+            border-color: #667eea;
+        }
+
+        .modal-category-btn:active {
+            transform: scale(0.95);
+        }
+
+        .modal-close {
+            width: 100%;
+            padding: 12px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .modal-close:hover {
+            background: #5a6268;
+        }
+
+        .rename-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+
+        .rename-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-confirm {
+            flex: 1;
+            padding: 12px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .modal-confirm:hover {
+            background: #218838;
+        }
+
+        .modal-cancel {
+            flex: 1;
+            padding: 12px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .modal-cancel:hover {
+            background: #5a6268;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { 
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6c757d;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .stats {
+            padding: 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+        }
+
+        .stat {
+            flex: 1;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛒 Ma Liste de Courses</h1>
+            <p>Organisez vos achats facilement</p>
+        </div>
+
+        <div class="controls">
+            <div class="search-row">
+                <input type="text" class="search-box" id="searchBox" placeholder="🔍 Rechercher un article...">
+                <button class="collapse-all-btn" id="collapseAllBtn" onclick="toggleAllCategories()" title="Replier/Déplier tout">
+                    ⬍
+                </button>
+            </div>
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-filter="all">Tout</button>
+                <button class="filter-btn" data-filter="checked">À acheter</button>
+                <button class="filter-btn" data-filter="active">Non sélectionnés</button>
+            </div>
+        </div>
+
+        <div class="meals-section">
+            <div class="meals-header">
+                <div class="meals-title">
+                    🍽️ Mes Plats
+                </div>
+                <button class="add-meal-btn" onclick="openMealModal()">+ Nouveau plat</button>
+            </div>
+            <div class="meals-list" id="mealsList"></div>
+        </div>
+
+        <div class="add-item">
+            <div class="add-form">
+                <div class="add-inputs">
+                    <input type="text" class="add-input" id="newItemInput" placeholder="Nouvel article...">
+                    <select class="add-select" id="categorySelect">
+                        <option value="fruits">🍎 Fruits</option>
+                        <option value="legumes">🥬 Légumes</option>
+                        <option value="viande">🥩 Viande</option>
+                        <option value="poisson">🐟 Poisson</option>
+                        <option value="produits-laitiers">🥛 Produits Laitiers</option>
+                        <option value="epicerie">🥫 Épicerie</option>
+                        <option value="boulangerie">🥖 Boulangerie</option>
+                        <option value="surgeles">❄️ Surgelés</option>
+                        <option value="boissons">🥤 Boissons</option>
+                        <option value="hygiene">🧴 Hygiène & Entretien</option>
+                        <option value="autre">📦 Autre</option>
+                    </select>
+                </div>
+                <button class="add-btn" id="addBtn">Ajouter</button>
+            </div>
+        </div>
+
+        <div id="categoriesContainer"></div>
+
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="totalItems">0</div>
+                <div class="stat-label">Total</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="checkedItems">0</div>
+                <div class="stat-label">À acheter</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="remainingItems">0</div>
+                <div class="stat-label">Non sélectionnés</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for moving items -->
+    <div id="moveModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Déplacer vers...</div>
+            <div class="modal-categories" id="modalCategories"></div>
+            <button class="modal-close" onclick="closeMoveModal()">Annuler</button>
+        </div>
+    </div>
+
+    <!-- Modal for renaming items -->
+    <div id="renameModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Renommer l'article</div>
+            <input type="text" class="rename-input" id="renameInput" placeholder="Nouveau nom...">
+            <div class="modal-buttons">
+                <button class="modal-confirm" onclick="confirmRename()">Confirmer</button>
+                <button class="modal-cancel" onclick="closeRenameModal()">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for creating meals -->
+    <div id="mealModal" class="modal">
+        <div class="modal-content meal-modal-content">
+            <div class="modal-header" id="mealModalHeader">Créer un nouveau plat</div>
+            <input type="text" class="rename-input" id="mealNameInput" placeholder="Nom du plat...">
+            <div class="ingredient-selector" id="ingredientSelector"></div>
+            <div class="modal-buttons">
+                <button class="modal-confirm" id="mealConfirmBtn" onclick="confirmMeal()">Créer le plat</button>
+                <button class="modal-cancel" onclick="closeMealModal()">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CATEGORIES = {
+            'fruits': { name: 'Fruits', icon: '🍎', items: [] },
+            'legumes': { name: 'Légumes', icon: '🥬', items: [] },
+            'viande': { name: 'Viande', icon: '🥩', items: [] },
+            'poisson': { name: 'Poisson', icon: '🐟', items: [] },
+            'produits-laitiers': { name: 'Produits Laitiers', icon: '🥛', items: ['Lait', 'Yaourts', 'Fromage', 'Beurre', 'Oeufs'] },
+            'epicerie': { name: 'Épicerie', icon: '🥫', items: ['Pâtes', 'Riz', 'Huile', 'Sauce tomate', 'Sel', 'Poivre', 'Sucre', 'Farine'] },
+            'boulangerie': { name: 'Boulangerie', icon: '🥖', items: ['Pain', 'Croissants', 'Brioche'] },
+            'surgeles': { name: 'Surgelés', icon: '❄️', items: ['Pizza', 'Légumes surgelés', 'Glace'] },
+            'boissons': { name: 'Boissons', icon: '🥤', items: ['Eau', 'Jus d\'orange', 'Café', 'Thé', 'Soda'] },
+            'hygiene': { name: 'Hygiène & Entretien', icon: '🧴', items: ['Savon', 'Shampoing', 'Dentifrice', 'Lessive', 'Papier toilette'] },
+            'autre': { name: 'Autre', icon: '📦', items: [] }
+        };
+
+        let groceryList = {};
+        let currentFilter = 'all';
+        let searchTerm = '';
+        let collapsedCategories = {};
+        let meals = {};
+
+        // Initialize with some default items
+        function initializeDefaultItems() {
+            const saved = localStorage.getItem('groceryList');
+            const savedCollapsed = localStorage.getItem('collapsedCategories');
+            const savedMeals = localStorage.getItem('meals');
+            
+            if (savedCollapsed) {
+                collapsedCategories = JSON.parse(savedCollapsed);
+            }
+
+            if (savedMeals) {
+                meals = JSON.parse(savedMeals);
+            }
+            
+            if (saved) {
+                groceryList = JSON.parse(saved);
+                
+                // Migration: split old combined categories into new separate ones
+                if (groceryList['fruits-legumes']) {
+                    // Separate fruits and vegetables
+                    const fruitsKeywords = ['citron', 'lime', 'orange', 'pomme', 'banane', 'baie', 'fraise', 'myrtille', 'framboise', 'raisin', 'mangue', 'ananas', 'avocat', 'kiwi', 'poire'];
+                    
+                    groceryList['fruits'] = groceryList['fruits'] || [];
+                    groceryList['legumes'] = groceryList['legumes'] || [];
+                    
+                    groceryList['fruits-legumes'].forEach(item => {
+                        const itemLower = item.name.toLowerCase();
+                        const isFruit = fruitsKeywords.some(keyword => itemLower.includes(keyword));
+                        
+                        if (isFruit) {
+                            groceryList['fruits'].push(item);
+                        } else {
+                            groceryList['legumes'].push(item);
+                        }
+                    });
+                    
+                    delete groceryList['fruits-legumes'];
+                }
+                
+                if (groceryList['viande-poisson']) {
+                    // Separate meat and fish
+                    const fishKeywords = ['saumon', 'thon', 'crevette', 'moule', 'cabillaud', 'poisson'];
+                    
+                    groceryList['viande'] = groceryList['viande'] || [];
+                    groceryList['poisson'] = groceryList['poisson'] || [];
+                    
+                    groceryList['viande-poisson'].forEach(item => {
+                        const itemLower = item.name.toLowerCase();
+                        const isFish = fishKeywords.some(keyword => itemLower.includes(keyword));
+                        
+                        if (isFish) {
+                            groceryList['poisson'].push(item);
+                        } else {
+                            groceryList['viande'].push(item);
+                        }
+                    });
+                    
+                    delete groceryList['viande-poisson'];
+                }
+                
+                saveToLocalStorage();
+            } else {
+                // Add items from user's list
+                let idCounter = Date.now();
+                groceryList = {
+                    'fruits': [
+                        { name: 'Citrons', checked: false, id: idCounter++ },
+                        { name: 'Limes', checked: false, id: idCounter++ },
+                        { name: 'Oranges', checked: false, id: idCounter++ },
+                        { name: 'Pommes', checked: false, id: idCounter++ },
+                        { name: 'Bananes', checked: false, id: idCounter++ },
+                        { name: 'Baies (fraises, myrtilles, framboises)', checked: false, id: idCounter++ },
+                        { name: 'Raisins', checked: false, id: idCounter++ },
+                        { name: 'Mangues', checked: false, id: idCounter++ },
+                        { name: 'Ananas', checked: false, id: idCounter++ },
+                        { name: 'Avocats', checked: false, id: idCounter++ },
+                        { name: 'Kiwis', checked: false, id: idCounter++ },
+                        { name: 'Poires', checked: false, id: idCounter++ }
+                    ],
+                    'legumes': [
+                        { name: 'Tomates', checked: false, id: idCounter++ },
+                        { name: 'Brocoli', checked: false, id: idCounter++ },
+                        { name: 'Poivrons', checked: false, id: idCounter++ },
+                        { name: 'Oignon', checked: false, id: idCounter++ },
+                        { name: 'Ail', checked: false, id: idCounter++ },
+                        { name: 'Pommes de terre', checked: false, id: idCounter++ },
+                        { name: 'Patates douces', checked: false, id: idCounter++ },
+                        { name: 'Carottes', checked: false, id: idCounter++ },
+                        { name: 'Poireaux', checked: false, id: idCounter++ },
+                        { name: 'Céleri', checked: false, id: idCounter++ },
+                        { name: 'Choux de Bruxelles', checked: false, id: idCounter++ },
+                        { name: 'Champignons', checked: false, id: idCounter++ },
+                        { name: 'Courgettes', checked: false, id: idCounter++ },
+                        { name: 'Aubergines', checked: false, id: idCounter++ },
+                        { name: 'Betteraves', checked: false, id: idCounter++ },
+                        { name: 'Concombre', checked: false, id: idCounter++ },
+                        { name: 'Salade/Laitue', checked: false, id: idCounter++ },
+                        { name: 'Épinards', checked: false, id: idCounter++ },
+                        { name: 'Roquette', checked: false, id: idCounter++ },
+                        { name: 'Herbes fraîches (basilic, persil, coriandre)', checked: false, id: idCounter++ }
+                    ],
+                    'viande': [
+                        { name: 'Poulet (entier, cuisses, poitrines)', checked: false, id: idCounter++ },
+                        { name: 'Bœuf haché', checked: false, id: idCounter++ },
+                        { name: 'Steaks', checked: false, id: idCounter++ },
+                        { name: 'Porc (côtelettes, rôti)', checked: false, id: idCounter++ },
+                        { name: 'Saucisses', checked: false, id: idCounter++ },
+                        { name: 'Bacon', checked: false, id: idCounter++ },
+                        { name: 'Agneau', checked: false, id: idCounter++ },
+                        { name: 'Dinde', checked: false, id: idCounter++ }
+                    ],
+                    'poisson': [
+                        { name: 'Saumon', checked: false, id: idCounter++ },
+                        { name: 'Thon', checked: false, id: idCounter++ },
+                        { name: 'Crevettes', checked: false, id: idCounter++ },
+                        { name: 'Moules', checked: false, id: idCounter++ },
+                        { name: 'Cabillaud ou autre poisson blanc', checked: false, id: idCounter++ }
+                    ],
+                    'produits-laitiers': [
+                        { name: 'Lait (entier, écrémé, alternatif)', checked: false, id: idCounter++ },
+                        { name: 'Crème fraîche/Crème liquide', checked: false, id: idCounter++ },
+                        { name: 'Beurre', checked: false, id: idCounter++ },
+                        { name: 'Yaourt nature', checked: false, id: idCounter++ },
+                        { name: 'Yaourt grec', checked: false, id: idCounter++ },
+                        { name: 'Fromage (cheddar, mozzarella, parmesan)', checked: false, id: idCounter++ },
+                        { name: 'Fromage blanc/Cottage cheese', checked: false, id: idCounter++ },
+                        { name: 'Œufs', checked: false, id: idCounter++ }
+                    ],
+                    'epicerie': [
+                        { name: 'Pain', checked: false, id: idCounter++ },
+                        { name: 'Pâtes', checked: false, id: idCounter++ },
+                        { name: 'Riz (blanc, brun, basmati)', checked: false, id: idCounter++ },
+                        { name: 'Quinoa', checked: false, id: idCounter++ },
+                        { name: 'Couscous', checked: false, id: idCounter++ },
+                        { name: 'Farine', checked: false, id: idCounter++ },
+                        { name: 'Sucre', checked: false, id: idCounter++ },
+                        { name: 'Cassonade', checked: false, id: idCounter++ },
+                        { name: 'Levure chimique', checked: false, id: idCounter++ },
+                        { name: 'Bicarbonate de soude', checked: false, id: idCounter++ },
+                        { name: 'Sel', checked: false, id: idCounter++ },
+                        { name: 'Poivre noir', checked: false, id: idCounter++ },
+                        { name: 'Flocons d\'avoine', checked: false, id: idCounter++ },
+                        { name: 'Céréales', checked: false, id: idCounter++ },
+                        { name: 'Pâte à tartiner', checked: false, id: idCounter++ },
+                        { name: 'Confiture', checked: false, id: idCounter++ },
+                        { name: 'Miel', checked: false, id: idCounter++ },
+                        { name: 'Beurre de cacahuète', checked: false, id: idCounter++ },
+                        { name: 'Huile d\'olive', checked: false, id: idCounter++ },
+                        { name: 'Huile végétale', checked: false, id: idCounter++ },
+                        { name: 'Vinaigre (balsamique, de vin)', checked: false, id: idCounter++ },
+                        { name: 'Sauce soja', checked: false, id: idCounter++ },
+                        { name: 'Ketchup', checked: false, id: idCounter++ },
+                        { name: 'Moutarde', checked: false, id: idCounter++ },
+                        { name: 'Mayonnaise', checked: false, id: idCounter++ },
+                        { name: 'Pâte de tomate', checked: false, id: idCounter++ },
+                        { name: 'Tomates en conserve', checked: false, id: idCounter++ },
+                        { name: 'Haricots en conserve (noirs, rouges, blancs)', checked: false, id: idCounter++ },
+                        { name: 'Pois chiches', checked: false, id: idCounter++ },
+                        { name: 'Lentilles', checked: false, id: idCounter++ },
+                        { name: 'Bouillon (légumes, poulet, bœuf)', checked: false, id: idCounter++ },
+                        { name: 'Lait de coco', checked: false, id: idCounter++ },
+                        { name: 'Noix (amandes, noix de cajou, noix)', checked: false, id: idCounter++ },
+                        { name: 'Graines (chia, lin, tournesol)', checked: false, id: idCounter++ },
+                        { name: 'Chocolat noir', checked: false, id: idCounter++ },
+                        { name: 'Pépites de chocolat', checked: false, id: idCounter++ },
+                        { name: 'Thon en conserve', checked: false, id: idCounter++ },
+                        { name: 'Sardines', checked: false, id: idCounter++ },
+                        { name: 'Cornichons', checked: false, id: idCounter++ },
+                        { name: 'Olives', checked: false, id: idCounter++ }
+                    ],
+                    'surgeles': [
+                        { name: 'Légumes surgelés (pois, maïs, haricots verts)', checked: false, id: idCounter++ },
+                        { name: 'Fruits surgelés (baies)', checked: false, id: idCounter++ },
+                        { name: 'Pizza surgelée', checked: false, id: idCounter++ },
+                        { name: 'Glace', checked: false, id: idCounter++ }
+                    ],
+                    'boissons': [
+                        { name: 'Eau en bouteille/eau gazeuse', checked: false, id: idCounter++ },
+                        { name: 'Jus (orange, pomme)', checked: false, id: idCounter++ },
+                        { name: 'Café', checked: false, id: idCounter++ },
+                        { name: 'Thé (noir, vert, tisanes)', checked: false, id: idCounter++ },
+                        { name: 'Sodas', checked: false, id: idCounter++ },
+                        { name: 'Bière/Vin', checked: false, id: idCounter++ }
+                    ],
+                    'hygiene': [
+                        { name: 'Papier toilette', checked: false, id: idCounter++ },
+                        { name: 'Essuie-tout', checked: false, id: idCounter++ },
+                        { name: 'Mouchoirs', checked: false, id: idCounter++ },
+                        { name: 'Savon à vaisselle', checked: false, id: idCounter++ },
+                        { name: 'Lessive', checked: false, id: idCounter++ },
+                        { name: 'Sacs poubelle', checked: false, id: idCounter++ },
+                        { name: 'Éponges', checked: false, id: idCounter++ },
+                        { name: 'Film alimentaire', checked: false, id: idCounter++ },
+                        { name: 'Papier aluminium', checked: false, id: idCounter++ },
+                        { name: 'Sacs de congélation', checked: false, id: idCounter++ },
+                        { name: 'Dentifrice', checked: false, id: idCounter++ },
+                        { name: 'Brosses à dents', checked: false, id: idCounter++ },
+                        { name: 'Shampoing', checked: false, id: idCounter++ },
+                        { name: 'Après-shampoing', checked: false, id: idCounter++ },
+                        { name: 'Gel douche', checked: false, id: idCounter++ },
+                        { name: 'Déodorant', checked: false, id: idCounter++ },
+                        { name: 'Rasoirs', checked: false, id: idCounter++ },
+                        { name: 'Crème à raser', checked: false, id: idCounter++ }
+                    ],
+                    'autre': [
+                        { name: 'Nourriture pour animaux (si applicable)', checked: false, id: idCounter++ },
+                        { name: 'Serviettes en papier', checked: false, id: idCounter++ },
+                        { name: 'Bougies', checked: false, id: idCounter++ },
+                        { name: 'Allumettes/Briquets', checked: false, id: idCounter++ },
+                        { name: 'Piles', checked: false, id: idCounter++ }
+                    ]
+                };
+                saveToLocalStorage();
+            }
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('groceryList', JSON.stringify(groceryList));
+            localStorage.setItem('collapsedCategories', JSON.stringify(collapsedCategories));
+            localStorage.setItem('meals', JSON.stringify(meals));
+        }
+
+        function toggleCategory(categoryKey) {
+            collapsedCategories[categoryKey] = !collapsedCategories[categoryKey];
+            saveToLocalStorage();
+            
+            // Animate the toggle
+            const header = event.target.closest('.category-header');
+            const itemsList = header.nextElementSibling;
+            const chevron = header.querySelector('.category-chevron');
+            
+            if (collapsedCategories[categoryKey]) {
+                header.classList.add('collapsed');
+                itemsList.classList.add('collapsed');
+                chevron.classList.add('collapsed');
+            } else {
+                header.classList.remove('collapsed');
+                itemsList.classList.remove('collapsed');
+                chevron.classList.remove('collapsed');
+            }
+        }
+
+        function toggleAllCategories() {
+            const btn = document.getElementById('collapseAllBtn');
+            const allCollapsed = Object.keys(CATEGORIES).every(key => collapsedCategories[key]);
+            
+            // Toggle all categories
+            Object.keys(CATEGORIES).forEach(categoryKey => {
+                collapsedCategories[categoryKey] = !allCollapsed;
+            });
+            
+            // Update button state
+            if (!allCollapsed) {
+                btn.classList.add('collapsed');
+                btn.textContent = '⬍';
+                btn.title = 'Déplier tout';
+            } else {
+                btn.classList.remove('collapsed');
+                btn.textContent = '⬍';
+                btn.title = 'Replier tout';
+            }
+            
+            saveToLocalStorage();
+            renderCategories();
+        }
+
+        function addItem(itemName, category) {
+            if (!itemName.trim()) return;
+            
+            if (!groceryList[category]) {
+                groceryList[category] = [];
+            }
+
+            groceryList[category].push({
+                name: itemName.trim(),
+                checked: false,
+                id: Date.now()
+            });
+
+            saveToLocalStorage();
+            renderCategories();
+            document.getElementById('newItemInput').value = '';
+        }
+
+        function toggleItem(category, itemId) {
+            const item = groceryList[category].find(i => i.id === itemId);
+            if (item) {
+                item.checked = !item.checked;
+                saveToLocalStorage();
+                renderCategories();
+            }
+        }
+
+        function deleteItem(category, itemId) {
+            groceryList[category] = groceryList[category].filter(i => i.id !== itemId);
+            if (groceryList[category].length === 0) {
+                delete groceryList[category];
+            }
+            saveToLocalStorage();
+            renderCategories();
+        }
+
+        // Move item modal functions
+        let currentMoveItem = null;
+
+        function openMoveModal(fromCategory, itemId) {
+            currentMoveItem = { fromCategory, itemId };
+            const modal = document.getElementById('moveModal');
+            const categoriesContainer = document.getElementById('modalCategories');
+            
+            // Build category buttons (exclude current category)
+            categoriesContainer.innerHTML = '';
+            Object.keys(CATEGORIES).forEach(categoryKey => {
+                if (categoryKey !== fromCategory) {
+                    const category = CATEGORIES[categoryKey];
+                    const btn = document.createElement('button');
+                    btn.className = 'modal-category-btn';
+                    btn.innerHTML = `${category.icon} ${category.name}`;
+                    btn.onclick = () => moveItemToCategory(categoryKey);
+                    categoriesContainer.appendChild(btn);
+                }
+            });
+            
+            modal.classList.add('show');
+        }
+
+        function closeMoveModal() {
+            const modal = document.getElementById('moveModal');
+            modal.classList.remove('show');
+            currentMoveItem = null;
+        }
+
+        function moveItemToCategory(toCategory) {
+            if (!currentMoveItem) return;
+            
+            const { fromCategory, itemId } = currentMoveItem;
+            const itemIndex = groceryList[fromCategory].findIndex(item => item.id === itemId);
+            
+            if (itemIndex !== -1) {
+                const [item] = groceryList[fromCategory].splice(itemIndex, 1);
+                
+                if (!groceryList[toCategory]) {
+                    groceryList[toCategory] = [];
+                }
+                groceryList[toCategory].push(item);
+                
+                if (groceryList[fromCategory].length === 0) {
+                    delete groceryList[fromCategory];
+                }
+                
+                saveToLocalStorage();
+                renderCategories();
+            }
+            
+            closeMoveModal();
+        }
+
+        // Rename item modal functions
+        let currentRenameItem = null;
+
+        function openRenameModal(category, itemId) {
+            currentRenameItem = { category, itemId };
+            const item = groceryList[category].find(i => i.id === itemId);
+            
+            if (item) {
+                const modal = document.getElementById('renameModal');
+                const input = document.getElementById('renameInput');
+                input.value = item.name;
+                modal.classList.add('show');
+                
+                // Focus and select text
+                setTimeout(() => {
+                    input.focus();
+                    input.select();
+                }, 100);
+            }
+        }
+
+        function closeRenameModal() {
+            const modal = document.getElementById('renameModal');
+            modal.classList.remove('show');
+            currentRenameItem = null;
+            currentRenameMeal = null;
+        }
+
+        function confirmRename() {
+            // Check if we're renaming a meal or an item
+            if (currentRenameMeal !== null) {
+                confirmRenameMeal();
+                return;
+            }
+            
+            if (!currentRenameItem) return;
+            
+            const { category, itemId } = currentRenameItem;
+            const newName = document.getElementById('renameInput').value.trim();
+            
+            if (newName) {
+                const item = groceryList[category].find(i => i.id === itemId);
+                if (item) {
+                    item.name = newName;
+                    saveToLocalStorage();
+                    renderCategories();
+                }
+            }
+            
+            closeRenameModal();
+        }
+
+        // Meal management functions
+        function renderMeals() {
+            const container = document.getElementById('mealsList');
+            const mealKeys = Object.keys(meals);
+
+            if (mealKeys.length === 0) {
+                container.innerHTML = `
+                    <div class="meals-empty">
+                        Aucun plat créé. Cliquez sur "+ Nouveau plat" pour commencer.
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = mealKeys.map(mealId => {
+                const meal = meals[mealId];
+                const ingredientCount = meal.ingredients.length;
+                const ingredientNames = meal.ingredients.map(ing => {
+                    const items = groceryList[ing.category] || [];
+                    // Compare as strings to handle both number and string IDs
+                    const item = items.find(i => String(i.id) === String(ing.itemId));
+                    return item ? item.name : '';
+                }).filter(Boolean).slice(0, 3).join(', ');
+                const moreText = ingredientCount > 3 ? ` +${ingredientCount - 3} autres` : '';
+
+                return `
+                    <div class="meal-item ${meal.selected ? 'selected' : ''}" id="meal-${mealId}">
+                        <input type="checkbox" class="meal-checkbox" 
+                               ${meal.selected ? 'checked' : ''}
+                               onchange="toggleMeal(${mealId})">
+                        <div class="meal-info">
+                            <div class="meal-name">${meal.name}</div>
+                            <div class="meal-ingredients">${ingredientNames}${moreText}</div>
+                        </div>
+                        <div class="item-actions">
+                            <button class="item-menu-btn" onclick="toggleMealMenu(event, ${mealId})" title="Actions">
+                                ⋮
+                            </button>
+                            <div class="item-dropdown" id="meal-menu-${mealId}">
+                                <button class="item-dropdown-item rename" onclick="openRenameMealModal(${mealId}); closeAllMealMenus();">
+                                    ✏️ Renommer
+                                </button>
+                                <button class="item-dropdown-item move" onclick="openEditMealModal(${mealId}); closeAllMealMenus();">
+                                    🍴 Modifier ingrédients
+                                </button>
+                                <button class="item-dropdown-item delete" onclick="deleteMeal(${mealId}); closeAllMealMenus();">
+                                    🗑️ Supprimer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openMealModal() {
+            const modal = document.getElementById('mealModal');
+            const selector = document.getElementById('ingredientSelector');
+            const header = document.getElementById('mealModalHeader');
+            const confirmBtn = document.getElementById('mealConfirmBtn');
+            const nameInput = document.getElementById('mealNameInput');
+            
+            // Set to create mode
+            header.textContent = 'Créer un nouveau plat';
+            confirmBtn.textContent = 'Créer le plat';
+            nameInput.disabled = false;
+            
+            // Build ingredient selector with all items grouped by category
+            let html = '';
+            Object.keys(CATEGORIES).forEach(categoryKey => {
+                const items = groceryList[categoryKey] || [];
+                if (items.length > 0) {
+                    const category = CATEGORIES[categoryKey];
+                    html += `
+                        <div class="ingredient-category">
+                            <div class="ingredient-category-header">
+                                ${category.icon} ${category.name}
+                            </div>
+                            <div class="ingredient-list">
+                                ${items.map(item => {
+                                    // Use JSON to safely encode both category and itemId
+                                    const value = JSON.stringify({ category: categoryKey, itemId: item.id });
+                                    return `
+                                        <div class="ingredient-checkbox-item">
+                                            <input type="checkbox" 
+                                                   id="ing-${categoryKey}-${item.id}"
+                                                   value='${value}'>
+                                            <label for="ing-${categoryKey}-${item.id}">${item.name}</label>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            selector.innerHTML = html;
+            document.getElementById('mealNameInput').value = '';
+            modal.classList.add('show');
+        }
+
+        function closeMealModal() {
+            const modal = document.getElementById('mealModal');
+            const nameInput = document.getElementById('mealNameInput');
+            modal.classList.remove('show');
+            nameInput.disabled = false;
+            currentEditMeal = null;
+        }
+
+        function confirmMeal() {
+            // Check if we're editing or creating
+            if (currentEditMeal !== null) {
+                confirmEditMeal();
+                return;
+            }
+            
+            const name = document.getElementById('mealNameInput').value.trim();
+            if (!name) {
+                alert('Veuillez entrer un nom pour le plat');
+                return;
+            }
+
+            // Get selected ingredients
+            const checkboxes = document.querySelectorAll('#ingredientSelector input[type="checkbox"]:checked');
+            const ingredients = Array.from(checkboxes).map(cb => {
+                try {
+                    return JSON.parse(cb.value);
+                } catch (e) {
+                    console.error('Error parsing ingredient:', cb.value, e);
+                    return null;
+                }
+            }).filter(Boolean);
+
+            if (ingredients.length === 0) {
+                alert('Veuillez sélectionner au moins un ingrédient');
+                return;
+            }
+
+            // Create meal
+            const mealId = Date.now();
+            meals[mealId] = {
+                name,
+                ingredients,
+                selected: false
+            };
+
+            saveToLocalStorage();
+            renderMeals();
+            closeMealModal();
+        }
+
+        function toggleMeal(mealId) {
+            const meal = meals[mealId];
+            meal.selected = !meal.selected;
+
+            console.log('Toggling meal:', meal.name, 'to', meal.selected);
+            console.log('Ingredients:', meal.ingredients);
+
+            // Toggle all ingredients in the grocery list
+            meal.ingredients.forEach(ing => {
+                console.log('Looking for ingredient:', ing);
+                const items = groceryList[ing.category] || [];
+                console.log('Items in category', ing.category, ':', items.map(i => ({ id: i.id, name: i.name })));
+                
+                // Try exact match first, then string comparison
+                let item = items.find(i => i.id === ing.itemId);
+                if (!item) {
+                    item = items.find(i => String(i.id) === String(ing.itemId));
+                }
+                
+                if (item) {
+                    console.log('Found item:', item.name, 'setting checked to', meal.selected);
+                    item.checked = meal.selected;
+                } else {
+                    console.log('Item not found! Looking for id:', ing.itemId, 'type:', typeof ing.itemId);
+                }
+            });
+
+            saveToLocalStorage();
+            renderMeals();
+            renderCategories();
+        }
+
+        function deleteMeal(mealId) {
+            if (confirm('Voulez-vous vraiment supprimer ce plat ?')) {
+                delete meals[mealId];
+                saveToLocalStorage();
+                renderMeals();
+            }
+        }
+
+        // Meal menu functions
+        function toggleMealMenu(event, mealId) {
+            event.stopPropagation();
+            const menuId = `meal-menu-${mealId}`;
+            const menu = document.getElementById(menuId);
+            const button = event.target;
+            
+            // Close all other menus
+            document.querySelectorAll('.item-dropdown').forEach(dropdown => {
+                if (dropdown.id !== menuId) {
+                    dropdown.classList.remove('show');
+                }
+            });
+            
+            // Remove active state from all buttons
+            document.querySelectorAll('.item-menu-btn').forEach(btn => {
+                if (btn !== button) {
+                    btn.classList.remove('active');
+                }
+            });
+            
+            // Toggle current menu
+            menu.classList.toggle('show');
+            button.classList.toggle('active');
+        }
+
+        function closeAllMealMenus() {
+            document.querySelectorAll('.item-dropdown').forEach(dropdown => {
+                dropdown.classList.remove('show');
+            });
+            document.querySelectorAll('.item-menu-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+        }
+
+        // Rename meal
+        let currentRenameMeal = null;
+
+        function openRenameMealModal(mealId) {
+            currentRenameMeal = mealId;
+            const meal = meals[mealId];
+            
+            if (meal) {
+                const modal = document.getElementById('renameModal');
+                const input = document.getElementById('renameInput');
+                input.value = meal.name;
+                modal.classList.add('show');
+                
+                // Focus and select text
+                setTimeout(() => {
+                    input.focus();
+                    input.select();
+                }, 100);
+            }
+        }
+
+        function confirmRenameMeal() {
+            if (currentRenameMeal === null) return;
+            
+            const newName = document.getElementById('renameInput').value.trim();
+            
+            if (newName) {
+                const meal = meals[currentRenameMeal];
+                if (meal) {
+                    meal.name = newName;
+                    saveToLocalStorage();
+                    renderMeals();
+                }
+            }
+            
+            closeRenameModal();
+            currentRenameMeal = null;
+        }
+
+        // Edit meal ingredients
+        let currentEditMeal = null;
+
+        function openEditMealModal(mealId) {
+            currentEditMeal = mealId;
+            const meal = meals[mealId];
+            
+            if (meal) {
+                const modal = document.getElementById('mealModal');
+                const selector = document.getElementById('ingredientSelector');
+                const nameInput = document.getElementById('mealNameInput');
+                const header = document.getElementById('mealModalHeader');
+                const confirmBtn = document.getElementById('mealConfirmBtn');
+                
+                // Set to edit mode
+                header.textContent = 'Modifier les ingrédients';
+                confirmBtn.textContent = 'Enregistrer';
+                nameInput.value = meal.name;
+                nameInput.disabled = true;
+                
+                // Build ingredient selector with current selections checked
+                let html = '';
+                Object.keys(CATEGORIES).forEach(categoryKey => {
+                    const items = groceryList[categoryKey] || [];
+                    if (items.length > 0) {
+                        const category = CATEGORIES[categoryKey];
+                        html += `
+                            <div class="ingredient-category">
+                                <div class="ingredient-category-header">
+                                    ${category.icon} ${category.name}
+                                </div>
+                                <div class="ingredient-list">
+                                    ${items.map(item => {
+                                        const value = JSON.stringify({ category: categoryKey, itemId: item.id });
+                                        // Check if this ingredient is in the meal
+                                        const isChecked = meal.ingredients.some(ing => 
+                                            ing.category === categoryKey && String(ing.itemId) === String(item.id)
+                                        );
+                                        return `
+                                            <div class="ingredient-checkbox-item">
+                                                <input type="checkbox" 
+                                                       id="ing-${categoryKey}-${item.id}"
+                                                       value='${value}'
+                                                       ${isChecked ? 'checked' : ''}>
+                                                <label for="ing-${categoryKey}-${item.id}">${item.name}</label>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+
+                selector.innerHTML = html;
+                modal.classList.add('show');
+            }
+        }
+
+        function confirmEditMeal() {
+            if (currentEditMeal === null) return;
+
+            // Get selected ingredients
+            const checkboxes = document.querySelectorAll('#ingredientSelector input[type="checkbox"]:checked');
+            const ingredients = Array.from(checkboxes).map(cb => {
+                try {
+                    return JSON.parse(cb.value);
+                } catch (e) {
+                    console.error('Error parsing ingredient:', cb.value, e);
+                    return null;
+                }
+            }).filter(Boolean);
+
+            if (ingredients.length === 0) {
+                alert('Veuillez sélectionner au moins un ingrédient');
+                return;
+            }
+
+            // Update meal
+            const meal = meals[currentEditMeal];
+            if (meal) {
+                meal.ingredients = ingredients;
+                saveToLocalStorage();
+                renderMeals();
+            }
+
+            closeMealModal();
+            currentEditMeal = null;
+        }
+
+        // Dropdown menu functions
+        function toggleItemMenu(event, category, itemId) {
+            event.stopPropagation();
+            const menuId = `menu-${category}-${itemId}`;
+            const menu = document.getElementById(menuId);
+            const button = event.target;
+            
+            // Close all other menus
+            document.querySelectorAll('.item-dropdown').forEach(dropdown => {
+                if (dropdown.id !== menuId) {
+                    dropdown.classList.remove('show');
+                }
+            });
+            
+            // Remove active state from all buttons
+            document.querySelectorAll('.item-menu-btn').forEach(btn => {
+                if (btn !== button) {
+                    btn.classList.remove('active');
+                }
+            });
+            
+            // Toggle current menu
+            menu.classList.toggle('show');
+            button.classList.toggle('active');
+        }
+
+        function closeAllMenus() {
+            document.querySelectorAll('.item-dropdown').forEach(dropdown => {
+                dropdown.classList.remove('show');
+            });
+            document.querySelectorAll('.item-menu-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+        }
+
+        function filterItems(items) {
+            let filtered = items;
+
+            // Apply status filter
+            if (currentFilter === 'checked') {
+                // Show items marked to buy
+                filtered = filtered.filter(item => item.checked);
+            } else if (currentFilter === 'active') {
+                // Show items not selected
+                filtered = filtered.filter(item => !item.checked);
+            }
+
+            // Apply search filter
+            if (searchTerm) {
+                filtered = filtered.filter(item => 
+                    item.name.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+            }
+
+            return filtered;
+        }
+
+        function renderCategories() {
+            const container = document.getElementById('categoriesContainer');
+            container.innerHTML = '';
+
+            let hasVisibleItems = false;
+
+            Object.keys(CATEGORIES).forEach(categoryKey => {
+                const items = groceryList[categoryKey] || [];
+                const filteredItems = filterItems(items);
+
+                if (filteredItems.length > 0) {
+                    hasVisibleItems = true;
+                    const categoryDiv = document.createElement('div');
+                    categoryDiv.className = 'category';
+
+                    const category = CATEGORIES[categoryKey];
+                    const isCollapsed = collapsedCategories[categoryKey] || false;
+                    
+                    categoryDiv.innerHTML = `
+                        <div class="category-header ${isCollapsed ? 'collapsed' : ''}" onclick="toggleCategory('${categoryKey}')">
+                            <span class="category-icon">${category.icon}</span>
+                            <span class="category-title">${category.name}</span>
+                            <span class="category-count">${filteredItems.length}</span>
+                            <span class="category-chevron ${isCollapsed ? 'collapsed' : ''}">▼</span>
+                        </div>
+                        <div class="items-list ${isCollapsed ? 'collapsed' : ''}" data-category="${categoryKey}">
+                            ${filteredItems.map(item => `
+                                <div class="item ${item.checked ? 'checked' : ''}" 
+                                     draggable="true" 
+                                     data-item-id="${item.id}"
+                                     data-category="${categoryKey}">
+                                    <span class="drag-handle">⋮⋮</span>
+                                    <input type="checkbox" class="item-checkbox" 
+                                           ${item.checked ? 'checked' : ''}
+                                           onchange="toggleItem('${categoryKey}', ${item.id})">
+                                    <span class="item-name">${item.name}</span>
+                                    <div class="item-actions">
+                                        <button class="item-menu-btn" onclick="toggleItemMenu(event, '${categoryKey}', ${item.id})" title="Actions">
+                                            ⋮
+                                        </button>
+                                        <div class="item-dropdown" id="menu-${categoryKey}-${item.id}">
+                                            <button class="item-dropdown-item rename" onclick="openRenameModal('${categoryKey}', ${item.id}); closeAllMenus();">
+                                                ✏️ Renommer
+                                            </button>
+                                            <button class="item-dropdown-item move" onclick="openMoveModal('${categoryKey}', ${item.id}); closeAllMenus();">
+                                                📁 Déplacer
+                                            </button>
+                                            <button class="item-dropdown-item delete" onclick="deleteItem('${categoryKey}', ${item.id}); closeAllMenus();">
+                                                🗑️ Supprimer
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+
+                    container.appendChild(categoryDiv);
+                }
+            });
+
+            if (!hasVisibleItems) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🛒</div>
+                        <p>Aucun article dans votre liste</p>
+                    </div>
+                `;
+            }
+
+            updateStats();
+            initializeDragAndDrop();
+            updateCollapseAllButton();
+        }
+
+        function updateCollapseAllButton() {
+            const btn = document.getElementById('collapseAllBtn');
+            if (!btn) return;
+            
+            const visibleCategories = Object.keys(CATEGORIES).filter(key => {
+                const items = groceryList[key] || [];
+                return filterItems(items).length > 0;
+            });
+            
+            const allCollapsed = visibleCategories.every(key => collapsedCategories[key]);
+            
+            if (allCollapsed) {
+                btn.classList.add('collapsed');
+            } else {
+                btn.classList.remove('collapsed');
+            }
+        }
+
+        function updateStats() {
+            let total = 0;
+            let checked = 0;
+
+            Object.values(groceryList).forEach(items => {
+                total += items.length;
+                checked += items.filter(item => item.checked).length;
+            });
+
+            document.getElementById('totalItems').textContent = total;
+            document.getElementById('checkedItems').textContent = checked;
+            document.getElementById('remainingItems').textContent = total - checked;
+        }
+
+        // Drag and Drop functionality
+        let draggedItem = null;
+
+        function initializeDragAndDrop() {
+            const items = document.querySelectorAll('.item[draggable="true"]');
+            
+            items.forEach(item => {
+                item.addEventListener('dragstart', handleDragStart);
+                item.addEventListener('dragend', handleDragEnd);
+                item.addEventListener('dragover', handleDragOver);
+                item.addEventListener('drop', handleDrop);
+                item.addEventListener('dragleave', handleDragLeave);
+            });
+        }
+
+        function handleDragStart(e) {
+            draggedItem = e.target;
+            e.target.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', e.target.innerHTML);
+        }
+
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+            document.querySelectorAll('.item').forEach(item => {
+                item.classList.remove('drag-over');
+            });
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            e.dataTransfer.dropEffect = 'move';
+            
+            if (e.target.classList.contains('item')) {
+                e.target.classList.add('drag-over');
+            }
+            
+            return false;
+        }
+
+        function handleDragLeave(e) {
+            if (e.target.classList.contains('item')) {
+                e.target.classList.remove('drag-over');
+            }
+        }
+
+        function handleDrop(e) {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+
+            const target = e.target.closest('.item');
+            if (draggedItem && target && draggedItem !== target) {
+                const draggedCategory = draggedItem.dataset.category;
+                const draggedItemId = parseInt(draggedItem.dataset.itemId);
+                const targetCategory = target.dataset.category;
+                const targetItemId = parseInt(target.dataset.itemId);
+
+                // Find items
+                const draggedItemIndex = groceryList[draggedCategory].findIndex(item => item.id === draggedItemId);
+                const targetItemIndex = groceryList[targetCategory].findIndex(item => item.id === targetItemId);
+
+                if (draggedCategory === targetCategory) {
+                    // Reorder within same category
+                    const [removed] = groceryList[draggedCategory].splice(draggedItemIndex, 1);
+                    groceryList[draggedCategory].splice(targetItemIndex, 0, removed);
+                } else {
+                    // Move to different category
+                    const [removed] = groceryList[draggedCategory].splice(draggedItemIndex, 1);
+                    groceryList[targetCategory].splice(targetItemIndex, 0, removed);
+                }
+
+                saveToLocalStorage();
+                renderCategories();
+            }
+
+            return false;
+        }
+
+        // Event Listeners
+        document.getElementById('addBtn').addEventListener('click', () => {
+            const itemName = document.getElementById('newItemInput').value;
+            const category = document.getElementById('categorySelect').value;
+            addItem(itemName, category);
+        });
+
+        document.getElementById('newItemInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const itemName = e.target.value;
+                const category = document.getElementById('categorySelect').value;
+                addItem(itemName, category);
+            }
+        });
+
+        document.getElementById('searchBox').addEventListener('input', (e) => {
+            searchTerm = e.target.value;
+            renderCategories();
+        });
+
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                currentFilter = e.target.dataset.filter;
+                renderCategories();
+            });
+        });
+
+        // Initialize
+        initializeDefaultItems();
+        renderCategories();
+        renderMeals();
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const moveModal = document.getElementById('moveModal');
+            const renameModal = document.getElementById('renameModal');
+            const mealModal = document.getElementById('mealModal');
+            
+            if (event.target === moveModal) {
+                closeMoveModal();
+            }
+            if (event.target === renameModal) {
+                closeRenameModal();
+            }
+            if (event.target === mealModal) {
+                closeMealModal();
+            }
+            
+            // Close dropdowns when clicking outside
+            if (!event.target.closest('.item-actions')) {
+                closeAllMenus();
+            }
+        };
+
+        // Handle Enter key in rename input
+        document.addEventListener('DOMContentLoaded', function() {
+            const renameInput = document.getElementById('renameInput');
+            if (renameInput) {
+                renameInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        confirmRename();
+                    }
+                });
+            }
+        });
+
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(function(registration) {
+                        console.log('Service Worker enregistré avec succès:', registration.scope);
+                    })
+                    .catch(function(error) {
+                        console.log('Échec de l\'enregistrement du Service Worker:', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
