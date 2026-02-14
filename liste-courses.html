@@ -953,6 +953,20 @@
             </div>
         </div>
 
+        <div class="controls">
+            <div class="search-row">
+                <input type="text" class="search-box" id="searchBox" placeholder="🔍 Rechercher un article...">
+                <button class="collapse-all-btn" id="collapseAllBtn" onclick="toggleAllCategories()" title="Replier/Déplier tout">
+                    ⬍
+                </button>
+            </div>
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-filter="all">Tout</button>
+                <button class="filter-btn" data-filter="checked">À acheter</button>
+                <button class="filter-btn" data-filter="active">Non sélectionnés</button>
+            </div>
+        </div>
+
         <div class="meals-section">
             <div class="meals-header" onclick="toggleMealsSection()" style="cursor: pointer; user-select: none;">
                 <div class="meals-title">
@@ -970,44 +984,9 @@
                     📦 Mes Articles
                     <span class="category-chevron" id="articlesChevron" style="margin-left: 10px; font-size: 14px; transition: transform 0.3s;">▼</span>
                 </div>
+                <button class="add-meal-btn" onclick="event.stopPropagation(); openAddArticleModal()">+ Nouvel article</button>
             </div>
             <div class="articles-content" id="articlesContent">
-                <div class="controls">
-                    <div class="search-row">
-                        <input type="text" class="search-box" id="searchBox" placeholder="🔍 Rechercher un article...">
-                        <button class="collapse-all-btn" id="collapseAllBtn" onclick="toggleAllCategories()" title="Replier/Déplier tout">
-                            ⬍
-                        </button>
-                    </div>
-                    <div class="filter-buttons">
-                        <button class="filter-btn active" data-filter="all">Tout</button>
-                        <button class="filter-btn" data-filter="checked">À acheter</button>
-                        <button class="filter-btn" data-filter="active">Non sélectionnés</button>
-                    </div>
-                </div>
-
-                <div class="add-item">
-                    <div class="add-form">
-                        <div class="add-inputs">
-                            <input type="text" class="add-input" id="newItemInput" placeholder="Nouvel article...">
-                            <select class="add-select" id="categorySelect">
-                                <option value="fruits">🍎 Fruits</option>
-                                <option value="legumes">🥬 Légumes</option>
-                                <option value="viande">🥩 Viande</option>
-                                <option value="poisson">🐟 Poisson</option>
-                                <option value="produits-laitiers">🥛 Produits Laitiers</option>
-                                <option value="epicerie">🥫 Épicerie</option>
-                                <option value="boulangerie">🥖 Boulangerie</option>
-                                <option value="surgeles">❄️ Surgelés</option>
-                                <option value="boissons">🥤 Boissons</option>
-                                <option value="hygiene">🧴 Hygiène & Entretien</option>
-                                <option value="autre">📦 Autre</option>
-                            </select>
-                        </div>
-                        <button class="add-btn" id="addBtn">Ajouter</button>
-                    </div>
-                </div>
-
                 <div id="categoriesContainer"></div>
 
                 <div class="stats">
@@ -1045,6 +1024,32 @@
             <div class="modal-buttons">
                 <button class="modal-confirm" onclick="confirmRename()">Confirmer</button>
                 <button class="modal-cancel" onclick="closeRenameModal()">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for adding article -->
+    <div id="addArticleModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Ajouter un article</div>
+            <input type="text" class="rename-input" id="modalArticleName" placeholder="Nom de l'article..." style="margin-bottom: 15px;">
+            <select class="rename-input" id="modalArticleCategory" style="margin-bottom: 15px; height: 45px;">
+                <option value="">Sélectionnez une catégorie...</option>
+                <option value="fruits">🍎 Fruits</option>
+                <option value="legumes">🥬 Légumes</option>
+                <option value="viande">🥩 Viande</option>
+                <option value="poisson">🐟 Poisson</option>
+                <option value="produits-laitiers">🥛 Produits Laitiers</option>
+                <option value="epicerie">🥫 Épicerie</option>
+                <option value="boulangerie">🥖 Boulangerie</option>
+                <option value="surgeles">❄️ Surgelés</option>
+                <option value="boissons">🥤 Boissons</option>
+                <option value="hygiene">🧴 Hygiène & Entretien</option>
+                <option value="autre">📦 Autre</option>
+            </select>
+            <div class="modal-buttons">
+                <button class="modal-confirm" onclick="confirmAddArticle()">Ajouter</button>
+                <button class="modal-cancel" onclick="closeAddArticleModal()">Annuler</button>
             </div>
         </div>
     </div>
@@ -1666,6 +1671,46 @@
             
             saveToLocalStorage();
             renderCategories();
+        }
+
+        function openAddArticleModal() {
+            const modal = document.getElementById('addArticleModal');
+            const nameInput = document.getElementById('modalArticleName');
+            const categorySelect = document.getElementById('modalArticleCategory');
+            
+            nameInput.value = '';
+            categorySelect.value = '';
+            modal.classList.add('show');
+            
+            setTimeout(() => {
+                nameInput.focus();
+            }, 100);
+        }
+
+        function closeAddArticleModal() {
+            const modal = document.getElementById('addArticleModal');
+            modal.classList.remove('show');
+        }
+
+        function confirmAddArticle() {
+            const nameInput = document.getElementById('modalArticleName');
+            const categorySelect = document.getElementById('modalArticleCategory');
+            
+            const itemName = nameInput.value.trim();
+            const category = categorySelect.value;
+            
+            if (!itemName) {
+                alert('Veuillez entrer un nom pour l\'article');
+                return;
+            }
+            
+            if (!category) {
+                alert('Veuillez sélectionner une catégorie');
+                return;
+            }
+            
+            addItem(itemName, category);
+            closeAddArticleModal();
         }
 
         function addItem(itemName, category) {
@@ -2579,20 +2624,6 @@
         }
 
         // Event Listeners
-        document.getElementById('addBtn').addEventListener('click', () => {
-            const itemName = document.getElementById('newItemInput').value;
-            const category = document.getElementById('categorySelect').value;
-            addItem(itemName, category);
-        });
-
-        document.getElementById('newItemInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                const itemName = e.target.value;
-                const category = document.getElementById('categorySelect').value;
-                addItem(itemName, category);
-            }
-        });
-
         document.getElementById('searchBox').addEventListener('input', (e) => {
             searchTerm = e.target.value;
             renderCategories();
@@ -2636,6 +2667,7 @@
             const renameModal = document.getElementById('renameModal');
             const mealModal = document.getElementById('mealModal');
             const settingsModal = document.getElementById('settingsModal');
+            const addArticleModal = document.getElementById('addArticleModal');
             
             if (event.target === moveModal) {
                 closeMoveModal();
@@ -2648,6 +2680,9 @@
             }
             if (event.target === settingsModal) {
                 closeSettingsModal();
+            }
+            if (event.target === addArticleModal) {
+                closeAddArticleModal();
             }
             
             // Close dropdowns when clicking outside
@@ -2682,6 +2717,16 @@
                 confirmCodeInput.addEventListener('keypress', function(e) {
                     if (e.key === 'Enter') {
                         createAccount();
+                    }
+                });
+            }
+
+            // Add article modal Enter key handler
+            const modalArticleName = document.getElementById('modalArticleName');
+            if (modalArticleName) {
+                modalArticleName.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        confirmAddArticle();
                     }
                 });
             }
