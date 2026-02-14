@@ -887,15 +887,14 @@
             <div style="display: flex; justify-content: center; margin-bottom: 15px;">
                 <img src="header-logo.png" alt="Ma Liste de Courses" style="width: 120px; height: 120px; object-fit: contain;">
             </div>
-            <p>
-                Organisez vos achats facilement
+            <div style="display: flex; justify-content: center; align-items: center; gap: 15px;">
                 <span class="update-status" onclick="checkForUpdates()" title="Vérifier les mises à jour">
                     <span class="update-status-icon" id="updateStatusIcon">✅</span>
                     <span id="updateStatusText">À jour</span>
                 </span>
-            </p>
-            <div id="syncStatus" style="font-size: 12px; margin-top: 10px; opacity: 0.8;">
-                <span id="syncIcon">☁️</span> <span id="syncText">Synchronisation...</span>
+                <div id="syncStatus" style="font-size: 12px; opacity: 0.8;">
+                    <span id="syncIcon">☁️</span> <span id="syncText">Synchronisation...</span>
+                </div>
             </div>
         </div>
 
@@ -2358,6 +2357,16 @@
                 document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
                 currentFilter = e.target.dataset.filter;
+                
+                // Si on clique sur "À acheter", on déplie toutes les catégories
+                if (currentFilter === 'checked') {
+                    // Déplier toutes les catégories
+                    Object.keys(CATEGORIES).forEach(categoryKey => {
+                        collapsedCategories[categoryKey] = false;
+                    });
+                    saveToLocalStorage();
+                }
+                
                 renderCategories();
             });
         });
