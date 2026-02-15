@@ -1714,7 +1714,6 @@
 
             saveToLocalStorage();
             renderCategories();
-            document.getElementById('newItemInput').value = '';
         }
 
         function toggleItem(category, itemId) {
@@ -1727,6 +1726,29 @@
         }
 
         function deleteItem(category, itemId) {
+            // Check if this item is used in any meals
+            const usedInMeals = [];
+            Object.keys(meals).forEach(mealId => {
+                const meal = meals[mealId];
+                const isUsed = meal.ingredients.some(ing => 
+                    ing.category === category && String(ing.itemId) === String(itemId)
+                );
+                if (isUsed) {
+                    usedInMeals.push(meal.name);
+                }
+            });
+
+            // If item is used in meals, show warning
+            if (usedInMeals.length > 0) {
+                const mealsList = usedInMeals.join(', ');
+                const confirmMessage = `⚠️ Cet article est utilisé dans ${usedInMeals.length} plat(s) :\n\n${mealsList}\n\nVoulez-vous vraiment le supprimer ?`;
+                
+                if (!confirm(confirmMessage)) {
+                    return; // User cancelled
+                }
+            }
+
+            // Proceed with deletion
             groceryList[category] = groceryList[category].filter(i => i.id !== itemId);
             if (groceryList[category].length === 0) {
                 delete groceryList[category];
