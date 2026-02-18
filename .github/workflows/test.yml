@@ -1,0 +1,147 @@
+name: 🧪 Tests Automatisés
+
+# Déclencher les tests à chaque push sur main et pull request
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  # Permet aussi de lancer manuellement depuis GitHub
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 1. Récupérer le code
+      - name: 📥 Checkout du code
+        uses: actions/checkout@v3
+      
+      # 2. Installer Node.js
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      # 3. Installer Playwright (navigateur pour les tests)
+      - name: 🎭 Installer Playwright
+        run: |
+          npm init -y
+          npm install -D @playwright/test
+          npx playwright install chromium
+      
+      # 4. Créer le script de test
+      - name: 📝 Créer le script de test
+        run: |
+          cat > test-runner.js << 'EOF'
+          const { chromium } = require('@playwright/test');
+
+          (async () => {
+            console.log('🚀 Lancement des tests automatisés...');
+            
+            const browser = await chromium.launch({
+              headless: true
+            });
+            
+            const context = await browser.newContext();
+            const page = await context.newPage();
+            
+            // Écouter les logs de la console
+            page.on('console', msg => {
+              const text = msg.text();
+              if (text.includes('Firebase') || text.includes('Test')) {
+                console.log('📊', text);
+              }
+            });
+            
+            // Charger la page de tests
+            console.log('📄 Chargement de la page de tests...');
+            await page.goto('file://' + process.cwd() + '/tests.html');
+            
+            // Attendre que la page soit prête
+            await page.waitForTimeout(2000);
+            
+            // Lancer tous les tests
+            console.log('▶️  Lancement de tous les tests...');
+            await page.evaluate(() => {
+              return runAllTests();
+            });
+            
+            // Attendre que tous les tests soient terminés (max 30 secondes)
+            console.log('⏳ Attente de la fin des tests...');
+            await page.waitForTimeout(30000);
+            
+            // Récupérer les résultats
+            const results = await page.evaluate(() => {
+              const testItems = document.querySelectorAll('.test-item');
+              const tests = [];
+              
+              testItems.forEach(item => {
+                const name = item.querySelector('h3').textContent;
+                const status = item.className.includes('passed') ? 'passed' : 
+                              item.className.includes('failed') ? 'failed' : 'running';
+                const steps = Array.from(item.querySelectorAll('.step')).map(s => s.textContent);
+                
+                tests.push({ name, status, steps });
+              });
+              
+              return tests;
+            });
+            
+            // Afficher les résultats
+            console.log('\n📊 ========== RÉSULTATS DES TESTS ==========\n');
+            
+            let passed = 0;
+            let failed = 0;
+            
+            results.forEach(test => {
+              const icon = test.status === 'passed' ? '✅' : 
+                          test.status === 'failed' ? '❌' : '🔄';
+              
+              console.log(`${icon} ${test.name}: ${test.status.toUpperCase()}`);
+              
+              if (test.status === 'passed') passed++;
+              if (test.status === 'failed') failed++;
+              
+              // Afficher les étapes
+              test.steps.forEach(step => {
+                console.log(`   ${step}`);
+              });
+              console.log('');
+            });
+            
+            const total = results.length;
+            const percentage = Math.round((passed / total) * 100);
+            
+            console.log('============================================');
+            console.log(`📈 Résumé: ${passed}/${total} tests réussis (${percentage}%)`);
+            console.log('============================================\n');
+            
+            await browser.close();
+            
+            // Échouer si des tests ont échoué
+            if (failed > 0) {
+              console.error(`❌ ${failed} test(s) ont échoué`);
+              process.exit(1);
+            } else {
+              console.log('✅ Tous les tests ont réussi !');
+              process.exit(0);
+            }
+          })();
+          EOF
+      
+      # 5. Exécuter les tests
+      - name: 🧪 Exécuter les tests
+        run: node test-runner.js
+      
+      # 6. Upload des résultats (même en cas d'échec)
+      - name: 📤 Upload des résultats
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: |
+            *.log
+            screenshots/
+          retention-days: 30
