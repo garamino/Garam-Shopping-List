@@ -323,6 +323,29 @@
             color: #333;
         }
 
+        .quantity-badge {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            color: #1976d2;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            font-family: monospace;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-left: 8px;
+        }
+
+        .quantity-badge:hover {
+            background: #bbdefb;
+            transform: scale(1.05);
+        }
+
+        .quantity-badge:active {
+            transform: scale(0.95);
+        }
+
         .item-actions {
             display: flex;
             gap: 3px;
@@ -1010,6 +1033,21 @@
             <div class="modal-buttons">
                 <button class="modal-confirm" onclick="confirmRename()">Confirmer</button>
                 <button class="modal-cancel" onclick="closeRenameModal()">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for quantity -->
+    <div id="quantityModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Quantité</div>
+            <p style="color: #666; font-size: 14px; margin-bottom: 15px;" id="quantityItemName">Article</p>
+            <input type="text" class="rename-input" id="quantityInput" placeholder="Ex: 7, 2kg, 500g...">
+            <p style="font-size: 12px; color: #999; margin: 10px 0;">💡 Exemples : x7, 2, 1kg, 500g, 2L</p>
+            <div class="modal-buttons">
+                <button class="modal-confirm" onclick="confirmQuantity()">Confirmer</button>
+                <button class="modal-cancel" onclick="removeQuantity()" style="background: #f44336;">Supprimer</button>
+                <button class="modal-cancel" onclick="closeQuantityModal()">Annuler</button>
             </div>
         </div>
     </div>
@@ -1896,6 +1934,71 @@
             closeRenameModal();
         }
 
+        // Quantity modal functions
+        let currentQuantityItem = null;
+
+        function openQuantityModal(category, itemId) {
+            currentQuantityItem = { category, itemId };
+            const item = groceryList[category].find(i => i.id === itemId);
+            
+            if (item) {
+                const modal = document.getElementById('quantityModal');
+                const input = document.getElementById('quantityInput');
+                const nameDisplay = document.getElementById('quantityItemName');
+                
+                nameDisplay.textContent = `Quantité pour "${item.name}"`;
+                input.value = item.quantity || '';
+                modal.classList.add('show');
+                
+                // Focus input
+                setTimeout(() => {
+                    input.focus();
+                    input.select();
+                }, 100);
+            }
+        }
+
+        function closeQuantityModal() {
+            const modal = document.getElementById('quantityModal');
+            modal.classList.remove('show');
+            currentQuantityItem = null;
+        }
+
+        function confirmQuantity() {
+            if (!currentQuantityItem) return;
+            
+            const { category, itemId } = currentQuantityItem;
+            const quantity = document.getElementById('quantityInput').value.trim();
+            
+            const item = groceryList[category].find(i => i.id === itemId);
+            if (item) {
+                if (quantity) {
+                    item.quantity = quantity;
+                } else {
+                    delete item.quantity;
+                }
+                saveToLocalStorage();
+                renderCategories();
+            }
+            
+            closeQuantityModal();
+        }
+
+        function removeQuantity() {
+            if (!currentQuantityItem) return;
+            
+            const { category, itemId } = currentQuantityItem;
+            const item = groceryList[category].find(i => i.id === itemId);
+            
+            if (item) {
+                delete item.quantity;
+                saveToLocalStorage();
+                renderCategories();
+            }
+            
+            closeQuantityModal();
+        }
+
         // Meal management functions
         function renderMeals() {
             const container = document.getElementById('mealsList');
@@ -2428,6 +2531,7 @@
                                            ${item.checked ? 'checked' : ''}
                                            onchange="toggleItem('${categoryKey}', ${item.id})">
                                     <span class="item-name">${item.name}</span>
+                                    ${item.quantity ? `<span class="quantity-badge" onclick="event.stopPropagation(); openQuantityModal('${categoryKey}', ${item.id})" title="Modifier la quantité">${item.quantity}</span>` : ''}
                                     <div class="item-actions">
                                         <button class="item-menu-btn" onclick="toggleItemMenu(event, '${categoryKey}', ${item.id})" title="Actions">
                                             ⋮
@@ -2435,6 +2539,9 @@
                                         <div class="item-dropdown" id="menu-${categoryKey}-${item.id}">
                                             <button class="item-dropdown-item rename" onclick="openRenameModal('${categoryKey}', ${item.id}); closeAllMenus();">
                                                 ✏️ Renommer
+                                            </button>
+                                            <button class="item-dropdown-item quantity" onclick="openQuantityModal('${categoryKey}', ${item.id}); closeAllMenus();">
+                                                📊 Quantité
                                             </button>
                                             <button class="item-dropdown-item move" onclick="openMoveModal('${categoryKey}', ${item.id}); closeAllMenus();">
                                                 📁 Déplacer
@@ -2705,6 +2812,7 @@
         window.onclick = function(event) {
             const moveModal = document.getElementById('moveModal');
             const renameModal = document.getElementById('renameModal');
+            const quantityModal = document.getElementById('quantityModal');
             const mealModal = document.getElementById('mealModal');
             const settingsModal = document.getElementById('settingsModal');
             const addArticleModal = document.getElementById('addArticleModal');
@@ -2714,6 +2822,9 @@
             }
             if (event.target === renameModal) {
                 closeRenameModal();
+            }
+            if (event.target === quantityModal) {
+                closeQuantityModal();
             }
             if (event.target === mealModal) {
                 closeMealModal();
@@ -2767,6 +2878,16 @@
                 modalArticleName.addEventListener('keypress', function(e) {
                     if (e.key === 'Enter') {
                         confirmAddArticle();
+                    }
+                });
+            }
+
+            // Quantity modal Enter key handler
+            const quantityInput = document.getElementById('quantityInput');
+            if (quantityInput) {
+                quantityInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        confirmQuantity();
                     }
                 });
             }
