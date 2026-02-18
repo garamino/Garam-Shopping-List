@@ -251,6 +251,9 @@
             <button onclick="runAllTests()">▶️ Lancer tous les tests</button>
             <button onclick="runTest('debouncing')" class="secondary">Test Debouncing</button>
             <button onclick="runTest('forceSave')" class="secondary">Test Sauvegarde Forcée</button>
+            <button onclick="runTest('deleteArticle')" class="secondary">Test Suppression</button>
+            <button onclick="runTest('createMeal')" class="secondary">Test Création Plat</button>
+            <button onclick="runTest('checkMeal')" class="secondary">Test Cocher Plat</button>
             <button onclick="clearResults()" class="secondary">🗑️ Effacer</button>
         </div>
 
@@ -325,6 +328,16 @@
                 checked: false
             });
             saveToLocalStorage();
+        }
+        
+        function deleteItem(category, itemId) {
+            if (groceryList[category]) {
+                groceryList[category] = groceryList[category].filter(i => i.id !== itemId);
+                if (groceryList[category].length === 0) {
+                    delete groceryList[category];
+                }
+                saveToLocalStorage();
+            }
         }
         
         function saveToLocalStorage() {
@@ -552,6 +565,220 @@
             return test;
         }
         
+        async function testDeleteArticle() {
+            const test = {
+                id: 'deleteArticle',
+                name: "Test Suppression Article",
+                steps: [],
+                status: "running",
+                startTime: Date.now()
+            };
+            
+            updateTestUI(test);
+            
+            try {
+                const testArticle = "Article à supprimer " + Date.now();
+                
+                test.steps.push(`1️⃣ Création de l'article "${testArticle}"...`);
+                updateTestUI(test);
+                
+                addItem(testArticle, 'fruits');
+                const articleId = groceryList.fruits[groceryList.fruits.length - 1].id;
+                
+                test.steps.push("2️⃣ Attente de la sauvegarde (6 secondes)...");
+                updateTestUI(test);
+                await sleep(6000);
+                
+                test.steps.push("3️⃣ Suppression de l'article...");
+                updateTestUI(test);
+                
+                deleteItem('fruits', articleId);
+                
+                test.steps.push("4️⃣ Attente de la synchronisation (6 secondes)...");
+                updateTestUI(test);
+                await sleep(6000);
+                
+                test.steps.push("5️⃣ Vérification dans Firebase...");
+                updateTestUI(test);
+                
+                const snapshot = await db.collection('users').doc(TEST_USER_ID).get();
+                
+                if (snapshot.exists) {
+                    const data = snapshot.data();
+                    const found = data.groceryList.fruits && data.groceryList.fruits.some(item => item.name === testArticle);
+                    
+                    if (!found) {
+                        test.status = "passed";
+                        test.steps.push(`✅ RÉUSSI: Article supprimé de Firebase`);
+                    } else {
+                        test.status = "failed";
+                        test.steps.push(`❌ ÉCHOUÉ: Article encore présent dans Firebase`);
+                    }
+                } else {
+                    test.status = "passed";
+                    test.steps.push(`✅ RÉUSSI: Aucune donnée (article bien supprimé)`);
+                }
+                
+            } catch (error) {
+                test.status = "failed";
+                test.steps.push(`❌ Erreur: ${error.message}`);
+                test.error = error.stack;
+            }
+            
+            test.duration = ((Date.now() - test.startTime) / 1000).toFixed(1);
+            updateTestUI(test);
+            return test;
+        }
+        
+        async function testCreateMeal() {
+            const test = {
+                id: 'createMeal',
+                name: "Test Création Plat",
+                steps: [],
+                status: "running",
+                startTime: Date.now()
+            };
+            
+            updateTestUI(test);
+            
+            try {
+                const testMeal = "Plat de test " + Date.now();
+                
+                test.steps.push(`1️⃣ Création du plat "${testMeal}"...`);
+                updateTestUI(test);
+                
+                // Créer un plat avec 2 ingrédients
+                const mealId = Date.now();
+                meals[mealId] = {
+                    name: testMeal,
+                    selected: false,
+                    ingredients: [
+                        { category: 'fruits', itemId: 1 },
+                        { category: 'fruits', itemId: 2 }
+                    ]
+                };
+                
+                saveToLocalStorage();
+                
+                test.steps.push("2️⃣ Attente de la sauvegarde (6 secondes)...");
+                updateTestUI(test);
+                await sleep(6000);
+                
+                test.steps.push("3️⃣ Vérification dans Firebase...");
+                updateTestUI(test);
+                
+                const snapshot = await db.collection('users').doc(TEST_USER_ID).get();
+                
+                if (snapshot.exists) {
+                    const data = snapshot.data();
+                    const found = data.meals && data.meals[mealId];
+                    
+                    if (found && found.name === testMeal) {
+                        test.status = "passed";
+                        test.steps.push(`✅ RÉUSSI: Plat "${testMeal}" trouvé dans Firebase`);
+                        test.steps.push(`   └─ Nombre d'ingrédients: ${found.ingredients.length}`);
+                    } else {
+                        test.status = "failed";
+                        test.steps.push(`❌ ÉCHOUÉ: Plat absent de Firebase`);
+                    }
+                } else {
+                    test.status = "failed";
+                    test.steps.push(`❌ ÉCHOUÉ: Aucune donnée dans Firebase`);
+                }
+                
+            } catch (error) {
+                test.status = "failed";
+                test.steps.push(`❌ Erreur: ${error.message}`);
+                test.error = error.stack;
+            }
+            
+            test.duration = ((Date.now() - test.startTime) / 1000).toFixed(1);
+            updateTestUI(test);
+            return test;
+        }
+        
+        async function testCheckMeal() {
+            const test = {
+                id: 'checkMeal',
+                name: "Test Cocher Plat → Ingrédients Cochés",
+                steps: [],
+                status: "running",
+                startTime: Date.now()
+            };
+            
+            updateTestUI(test);
+            
+            try {
+                test.steps.push("1️⃣ Réinitialisation des articles...");
+                updateTestUI(test);
+                
+                // S'assurer que les articles sont décochés
+                groceryList.fruits.forEach(item => item.checked = false);
+                
+                test.steps.push("2️⃣ Création d'un plat avec 3 ingrédients...");
+                updateTestUI(test);
+                
+                const mealId = Date.now();
+                meals[mealId] = {
+                    name: "Plat Test Cocher",
+                    selected: false,
+                    ingredients: [
+                        { category: 'fruits', itemId: 1 }, // Bananes
+                        { category: 'fruits', itemId: 2 }, // Pommes
+                        { category: 'fruits', itemId: 3 }  // Oranges
+                    ]
+                };
+                
+                test.steps.push("3️⃣ Simulation du clic sur le plat...");
+                updateTestUI(test);
+                
+                // Simuler toggleMeal
+                const meal = meals[mealId];
+                meal.selected = !meal.selected;
+                
+                // Cocher tous les ingrédients du plat
+                meal.ingredients.forEach(ing => {
+                    const items = groceryList[ing.category];
+                    const item = items.find(i => i.id === ing.itemId);
+                    if (item) {
+                        item.checked = meal.selected;
+                    }
+                });
+                
+                test.steps.push("4️⃣ Vérification que les ingrédients sont cochés...");
+                updateTestUI(test);
+                
+                const bananes = groceryList.fruits.find(i => i.id === 1);
+                const pommes = groceryList.fruits.find(i => i.id === 2);
+                const oranges = groceryList.fruits.find(i => i.id === 3);
+                
+                const allChecked = bananes.checked && pommes.checked && oranges.checked;
+                
+                if (allChecked) {
+                    test.status = "passed";
+                    test.steps.push(`✅ RÉUSSI: Les 3 ingrédients sont bien cochés`);
+                    test.steps.push(`   └─ Bananes: ${bananes.checked ? '✅' : '❌'}`);
+                    test.steps.push(`   └─ Pommes: ${pommes.checked ? '✅' : '❌'}`);
+                    test.steps.push(`   └─ Oranges: ${oranges.checked ? '✅' : '❌'}`);
+                } else {
+                    test.status = "failed";
+                    test.steps.push(`❌ ÉCHOUÉ: Certains ingrédients ne sont pas cochés`);
+                    test.steps.push(`   └─ Bananes: ${bananes.checked ? '✅' : '❌'}`);
+                    test.steps.push(`   └─ Pommes: ${pommes.checked ? '✅' : '❌'}`);
+                    test.steps.push(`   └─ Oranges: ${oranges.checked ? '✅' : '❌'}`);
+                }
+                
+            } catch (error) {
+                test.status = "failed";
+                test.steps.push(`❌ Erreur: ${error.message}`);
+                test.error = error.stack;
+            }
+            
+            test.duration = ((Date.now() - test.startTime) / 1000).toFixed(1);
+            updateTestUI(test);
+            return test;
+        }
+        
         // ========================================
         // RUNNER
         // ========================================
@@ -565,6 +792,9 @@
             allTests.push(await testDebouncing());
             allTests.push(await testForceSave());
             allTests.push(await testAddArticle());
+            allTests.push(await testDeleteArticle());
+            allTests.push(await testCreateMeal());
+            allTests.push(await testCheckMeal());
             
             showSummary(allTests);
         }
@@ -583,6 +813,15 @@
                     break;
                 case 'addArticle':
                     result = await testAddArticle();
+                    break;
+                case 'deleteArticle':
+                    result = await testDeleteArticle();
+                    break;
+                case 'createMeal':
+                    result = await testCreateMeal();
+                    break;
+                case 'checkMeal':
+                    result = await testCheckMeal();
                     break;
             }
             
