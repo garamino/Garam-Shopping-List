@@ -1509,16 +1509,26 @@
             }
         }
 
+        let saveTimeout = null; // Timer for debouncing
+
         function saveToLocalStorage() {
-            // Save to localStorage (backup)
+            // Save to localStorage (backup) - IMMEDIATE
             localStorage.setItem('groceryList', JSON.stringify(groceryList));
             localStorage.setItem('collapsedCategories', JSON.stringify(collapsedCategories));
             localStorage.setItem('meals', JSON.stringify(meals));
             localStorage.setItem('mealsCollapsed', mealsCollapsed.toString());
             localStorage.setItem('articlesCollapsed', articlesCollapsed.toString());
             
-            // Save to Firebase
-            saveToFirebase();
+            // Show "pending" status immediately
+            updateSyncStatus('pending');
+            
+            // Cancel previous timer if exists
+            clearTimeout(saveTimeout);
+            
+            // Wait 5 seconds before saving to Firebase
+            saveTimeout = setTimeout(() => {
+                saveToFirebase();
+            }, 5000); // 5 seconds debouncing
         }
 
         async function saveToFirebase() {
@@ -1554,6 +1564,10 @@
             if (!iconEl || !textEl) return;
             
             switch(status) {
+                case 'pending':
+                    iconEl.textContent = '💾';
+                    textEl.textContent = 'Modifications en attente...';
+                    break;
                 case 'syncing':
                     iconEl.textContent = '🔄';
                     textEl.textContent = 'Synchronisation...';
@@ -2737,6 +2751,28 @@
                         confirmAddArticle();
                     }
                 });
+            }
+        });
+
+        // Force save to Firebase before closing the app/browser
+        window.addEventListener('beforeunload', function(event) {
+            // If there's a pending save (timer running), force it immediately
+            if (saveTimeout) {
+                clearTimeout(saveTimeout);
+                
+                // Force immediate Firebase save
+                if (isFirebaseReady && db && userId) {
+                    const dataToSave = {
+                        groceryList: groceryList,
+                        meals: meals,
+                        collapsedCategories: collapsedCategories,
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+                    
+                    // Use synchronous approach for beforeunload
+                    db.collection('users').doc(userId).set(dataToSave, { merge: true });
+                    console.log('💾 Sauvegarde forcée avant fermeture');
+                }
             }
         });
 
