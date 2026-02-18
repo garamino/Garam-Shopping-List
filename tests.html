@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Tests - Ma Liste de Courses</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.secondary {
+            background: #6c757d;
+        }
+
+        button.secondary:hover {
+            background: #5a6268;
+        }
+
+        .test-item {
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .test-item.running {
+            border-color: #2196f3;
+            background: #e3f2fd;
+        }
+
+        .test-item.passed {
+            border-color: #4caf50;
+            background: #e8f5e9;
+        }
+
+        .test-item.failed {
+            border-color: #f44336;
+            background: #ffebee;
+        }
+
+        .test-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .test-header h3 {
+            flex: 1;
+            font-size: 18px;
+        }
+
+        .test-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .test-status.running {
+            background: #2196f3;
+            color: white;
+        }
+
+        .test-status.passed {
+            background: #4caf50;
+            color: white;
+        }
+
+        .test-status.failed {
+            background: #f44336;
+            color: white;
+        }
+
+        .test-steps {
+            margin-left: 20px;
+        }
+
+        .step {
+            padding: 8px 0;
+            color: #333;
+            font-size: 14px;
+            border-left: 3px solid #e0e0e0;
+            padding-left: 15px;
+            margin: 5px 0;
+        }
+
+        .test-item.running .step {
+            border-left-color: #2196f3;
+        }
+
+        .test-item.passed .step {
+            border-left-color: #4caf50;
+        }
+
+        .test-item.failed .step {
+            border-left-color: #f44336;
+        }
+
+        .summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-top: 30px;
+            animation: slideIn 0.5s;
+        }
+
+        .summary h2 {
+            margin-bottom: 20px;
+        }
+
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .stat {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-details {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 13px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Suite de Tests Automatisés</h1>
+        <p class="subtitle">Tests de la liste de courses - Debouncing, Firebase, et plus</p>
+
+        <div class="controls">
+            <button onclick="runAllTests()">▶️ Lancer tous les tests</button>
+            <button onclick="runTest('debouncing')" class="secondary">Test Debouncing</button>
+            <button onclick="runTest('forceSave')" class="secondary">Test Sauvegarde Forcée</button>
+            <button onclick="clearResults()" class="secondary">🗑️ Effacer</button>
+        </div>
+
+        <div id="results"></div>
+
+        <div id="summary"></div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // ========================================
+        // CONFIGURATION
+        // ========================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyBJjoBkEk-FdZ3gjfmKhGyCFc1tA7JXz5g",
+            authDomain: "liste-course-8c2cf.firebaseapp.com",
+            projectId: "liste-course-8c2cf",
+            storageBucket: "liste-course-8c2cf.firebasestorage.app",
+            messagingSenderId: "426451396001",
+            appId: "1:426451396001:web:4789552edad9f52f5c97e0"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        
+        // Test user ID
+        const TEST_USER_ID = 'test_user_automated';
+        
+        // Variables globales pour les tests
+        let groceryList = {
+            fruits: [
+                { id: 1, name: 'Bananes', checked: false },
+                { id: 2, name: 'Pommes', checked: false },
+                { id: 3, name: 'Oranges', checked: false },
+                { id: 4, name: 'Kiwis', checked: false },
+                { id: 5, name: 'Citrons', checked: false }
+            ]
+        };
+        let meals = {};
+        let collapsedCategories = {};
+        
+        // Compteur d'appels Firebase
+        let firebaseCallCounter = 0;
+        let lastFirebaseCall = null;
+        
+        // Timer pour debouncing
+        let saveTimeout = null;
+        
+        // ========================================
+        // SIMULATION DES FONCTIONS DE L'APP
+        // ========================================
+        
+        function toggleItem(category, itemId) {
+            const item = groceryList[category].find(i => i.id === itemId);
+            if (item) {
+                item.checked = !item.checked;
+                saveToLocalStorage();
+            }
+        }
+        
+        function addItem(name, category) {
+            if (!groceryList[category]) {
+                groceryList[category] = [];
+            }
+            groceryList[category].push({
+                id: Date.now(),
+                name: name,
+                checked: false
+            });
+            saveToLocalStorage();
+        }
+        
+        function saveToLocalStorage() {
+            // Simuler la sauvegarde locale (immédiate)
+            localStorage.setItem('test_groceryList', JSON.stringify(groceryList));
+            
+            // Debouncing pour Firebase
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                saveToFirebase();
+            }, 5000); // 5 secondes
+        }
+        
+        async function saveToFirebase() {
+            firebaseCallCounter++;
+            lastFirebaseCall = new Date();
+            console.log(`📊 Appel Firebase #${firebaseCallCounter} à ${lastFirebaseCall.toLocaleTimeString()}`);
+            
+            try {
+                await db.collection('users').doc(TEST_USER_ID).set({
+                    groceryList: groceryList,
+                    meals: meals,
+                    collapsedCategories: collapsedCategories,
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+                
+                console.log('✅ Sauvegarde Firebase réussie');
+            } catch (error) {
+                console.error('❌ Erreur Firebase:', error);
+            }
+        }
+        
+        // Simuler beforeunload
+        function simulateBeforeUnload() {
+            if (saveTimeout) {
+                clearTimeout(saveTimeout);
+                saveToFirebase(); // Force immediate save
+            }
+        }
+        
+        // ========================================
+        // TESTS
+        // ========================================
+        
+        async function testDebouncing() {
+            const test = {
+                id: 'debouncing',
+                name: "Test Debouncing (5 secondes)",
+                steps: [],
+                status: "running",
+                startTime: Date.now()
+            };
+            
+            updateTestUI(test);
+            
+            try {
+                // Réinitialiser
+                firebaseCallCounter = 0;
+                groceryList.fruits.forEach(item => item.checked = false);
+                
+                test.steps.push("1️⃣ Réinitialisation des compteurs...");
+                updateTestUI(test);
+                await sleep(500);
+                
+                test.steps.push("2️⃣ Cocher 5 articles rapidement (200ms entre chaque)...");
+                updateTestUI(test);
+                
+                // Cocher 5 articles rapidement
+                for (let i = 0; i < 5; i++) {
+                    toggleItem('fruits', i + 1);
+                    test.steps.push(`   └─ Article ${i + 1} coché`);
+                    updateTestUI(test);
+                    await sleep(200);
+                }
+                
+                test.steps.push("3️⃣ Attente de 6 secondes (debouncing de 5s + marge)...");
+                updateTestUI(test);
+                await sleep(6000);
+                
+                test.steps.push("4️⃣ Vérification des appels Firebase...");
+                updateTestUI(test);
+                
+                if (firebaseCallCounter === 1) {
+                    test.status = "passed";
+                    test.steps.push(`✅ RÉUSSI: 1 seul appel Firebase détecté (attendu: 1)`);
+                    test.steps.push(`   └─ Économie: 80% (5 actions → 1 appel)`);
+                } else {
+                    test.status = "failed";
+                    test.steps.push(`❌ ÉCHOUÉ: ${firebaseCallCounter} appel(s) détecté(s) (attendu: 1)`);
+                    if (firebaseCallCounter === 0) {
+                        test.steps.push(`   └─ Erreur: Aucun appel Firebase n'a été fait`);
+                    } else if (firebaseCallCounter > 1) {
+                        test.steps.push(`   └─ Erreur: Le debouncing ne fonctionne pas correctement`);
+                    }
+                }
+                
+            } catch (error) {
+                test.status = "failed";
+                test.steps.push(`❌ Erreur: ${error.message}`);
+                test.error = error.stack;
+            }
+            
+            test.duration = ((Date.now() - test.startTime) / 1000).toFixed(1);
+            updateTestUI(test);
+            return test;
+        }
+        
+        async function testForceSave() {
+            const test = {
+                id: 'forceSave',
+                name: "Test Sauvegarde Forcée (beforeunload)",
+                steps: [],
+                status: "running",
+                startTime: Date.now()
+            };
+            
+            updateTestUI(test);
+            
+            try {
+                // Réinitialiser
+                firebaseCallCounter = 0;
+                
+                test.steps.push("1️⃣ Réinitialisation...");
+                updateTestUI(test);
+                await sleep(500);
+                
+                test.steps.push("2️⃣ Cocher un article...");
+                updateTestUI(test);
+                toggleItem('fruits', 1);
+                
+                test.steps.push("3️⃣ Attente de 2 secondes (< 5s debouncing)...");
+                updateTestUI(test);
+                await sleep(2000);
+                
+                test.steps.push(`   └─ Appels Firebase actuels: ${firebaseCallCounter}`);
+                updateTestUI(test);
+                
+                test.steps.push("4️⃣ Simulation de fermeture (beforeunload)...");
+                updateTestUI(test);
+                
+                const callsBefore = firebaseCallCounter;
+                simulateBeforeUnload();
+                
+                await sleep(1000); // Attendre que la sauvegarde forcée se fasse
+                
+                test.steps.push(`5️⃣ Vérification de la sauvegarde forcée...`);
+                updateTestUI(test);
+                
+                const callsAfter = firebaseCallCounter;
+                
+                if (callsAfter > callsBefore) {
+                    test.status = "passed";
+                    test.steps.push(`✅ RÉUSSI: Sauvegarde forcée détectée`);
+                    test.steps.push(`   └─ Appels Firebase: ${callsBefore} → ${callsAfter}`);
+                } else {
+                    test.status = "failed";
+                    test.steps.push(`❌ ÉCHOUÉ: Aucune sauvegarde forcée`);
+                    test.steps.push(`   └─ Appels Firebase: ${callsBefore} (inchangé)`);
+                }
+                
+            } catch (error) {
+                test.status = "failed";
+                test.steps.push(`❌ Erreur: ${error.message}`);
+                test.error = error.stack;
+            }
+            
+            test.duration = ((Date.now() - test.startTime) / 1000).toFixed(1);
+            updateTestUI(test);
+            return test;
+        }
+        
+        async function testAddArticle() {
+            const test = {
+                id: 'addArticle',
+                name: "Test Ajout Article",
+                steps: [],
+                status: "running",
+                startTime: Date.now()
+            };
+            
+            updateTestUI(test);
+            
+            try {
+                const testArticle = "Test Article " + Date.now();
+                
+                test.steps.push(`1️⃣ Ajout de l'article "${testArticle}"...`);
+                updateTestUI(test);
+                
+                addItem(testArticle, 'fruits');
+                
+                test.steps.push("2️⃣ Attente de la sauvegarde (6 secondes)...");
+                updateTestUI(test);
+                await sleep(6000);
+                
+                test.steps.push("3️⃣ Vérification de la présence dans Firebase...");
+                updateTestUI(test);
+                
+                const snapshot = await db.collection('users').doc(TEST_USER_ID).get();
+                
+                if (snapshot.exists) {
+                    const data = snapshot.data();
+                    const found = data.groceryList.fruits.some(item => item.name === testArticle);
+                    
+                    if (found) {
+                        test.status = "passed";
+                        test.steps.push(`✅ RÉUSSI: Article "${testArticle}" trouvé dans Firebase`);
+                    } else {
+                        test.status = "failed";
+                        test.steps.push(`❌ ÉCHOUÉ: Article "${testArticle}" absent de Firebase`);
+                        test.steps.push(`   └─ Articles présents: ${data.groceryList.fruits.map(i => i.name).join(', ')}`);
+                    }
+                } else {
+                    test.status = "failed";
+                    test.steps.push(`❌ ÉCHOUÉ: Aucune donnée dans Firebase pour l'utilisateur test`);
+                }
+                
+            } catch (error) {
+                test.status = "failed";
+                test.steps.push(`❌ Erreur: ${error.message}`);
+                test.error = error.stack;
+            }
+            
+            test.duration = ((Date.now() - test.startTime) / 1000).toFixed(1);
+            updateTestUI(test);
+            return test;
+        }
+        
+        // ========================================
+        // RUNNER
+        // ========================================
+        
+        async function runAllTests() {
+            console.log('🚀 Lancement de tous les tests...');
+            clearResults();
+            
+            const allTests = [];
+            
+            allTests.push(await testDebouncing());
+            allTests.push(await testForceSave());
+            allTests.push(await testAddArticle());
+            
+            showSummary(allTests);
+        }
+        
+        async function runTest(testName) {
+            console.log(`🧪 Lancement du test: ${testName}`);
+            clearResults();
+            
+            let result;
+            switch(testName) {
+                case 'debouncing':
+                    result = await testDebouncing();
+                    break;
+                case 'forceSave':
+                    result = await testForceSave();
+                    break;
+                case 'addArticle':
+                    result = await testAddArticle();
+                    break;
+            }
+            
+            if (result) {
+                showSummary([result]);
+            }
+        }
+        
+        // ========================================
+        // UI
+        // ========================================
+        
+        function updateTestUI(test) {
+            const resultsDiv = document.getElementById('results');
+            let testDiv = document.getElementById(`test-${test.id}`);
+            
+            if (!testDiv) {
+                testDiv = document.createElement('div');
+                testDiv.id = `test-${test.id}`;
+                resultsDiv.appendChild(testDiv);
+            }
+            
+            testDiv.className = `test-item ${test.status}`;
+            
+            const statusText = {
+                running: '🔄 EN COURS',
+                passed: '✅ RÉUSSI',
+                failed: '❌ ÉCHOUÉ'
+            };
+            
+            testDiv.innerHTML = `
+                <div class="test-header">
+                    <h3>${test.name}</h3>
+                    <span class="test-status ${test.status}">${statusText[test.status]}</span>
+                </div>
+                ${test.duration ? `<p style="color: #666; font-size: 13px; margin-bottom: 10px;">⏱️ Durée: ${test.duration}s</p>` : ''}
+                <div class="test-steps">
+                    ${test.steps.map(step => `<div class="step">${step}</div>`).join('')}
+                </div>
+                ${test.error ? `<div class="error-details">${test.error}</div>` : ''}
+            `;
+        }
+        
+        function showSummary(tests) {
+            const summaryDiv = document.getElementById('summary');
+            
+            const passed = tests.filter(t => t.status === 'passed').length;
+            const failed = tests.filter(t => t.status === 'failed').length;
+            const total = tests.length;
+            const percentage = Math.round((passed / total) * 100);
+            
+            summaryDiv.innerHTML = `
+                <div class="summary">
+                    <h2>📊 Résumé des Tests</h2>
+                    <div class="summary-stats">
+                        <div class="stat">
+                            <div class="stat-value">${total}</div>
+                            <div class="stat-label">Tests exécutés</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-value">${passed}</div>
+                            <div class="stat-label">✅ Réussis</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-value">${failed}</div>
+                            <div class="stat-label">❌ Échoués</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-value">${percentage}%</div>
+                            <div class="stat-label">Taux de réussite</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('summary').innerHTML = '';
+        }
+        
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+        
+        // Message initial
+        console.log('🧪 Page de tests chargée - Prêt à lancer les tests !');
+    </script>
+</body>
+</html>
