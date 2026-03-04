@@ -538,6 +538,34 @@
             border-color: #667eea;
         }
 
+        /* Présence en ligne */
+        .presence-dot {
+            display: inline-block;
+            font-size: 12px;
+            margin: 2px 4px 2px 0;
+            padding: 3px 10px;
+            border-radius: 20px;
+        }
+        .presence-dot.online { color: #28a745; background: #d4edda; }
+        .presence-dot.offline { color: #6c757d; background: #f8f9fa; }
+
+        /* Sélecteur de liste */
+        .list-picker-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .list-picker-item:hover { border-color: #667eea; background: #f8f9ff; }
+        .list-picker-icon { font-size: 24px; }
+        .list-picker-name { font-weight: 600; color: #333; font-size: 15px; }
+        .list-picker-members { font-size: 12px; color: #999; margin-top: 2px; }
+
         .auth-divider {
             margin: 20px 0;
             text-align: center;
@@ -1103,6 +1131,15 @@
         </div>
     </div>
 
+    <!-- List Picker Modal -->
+    <div id="listPickerModal" class="auth-modal">
+        <div class="auth-modal-content">
+            <div class="auth-modal-header">📋 Choisir une liste</div>
+            <p style="color:#666; font-size:14px; margin-bottom:15px;">Sélectionnez la liste à ouvrir :</p>
+            <div id="listPickerItems"></div>
+        </div>
+    </div>
+
     <!-- Authentication Modal -->
     <div id="authModal" class="auth-modal">
         <div class="auth-modal-content">
@@ -1139,12 +1176,43 @@
             <div class="modal-header">⚙️ Paramètres</div>
             <div style="text-align: left; margin: 20px 0;">
                 <p style="margin-bottom: 10px;"><strong>Compte connecté :</strong></p>
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 15px;">
                     <code id="displayUserCode" style="font-size: 15px; font-weight: 600; color: #667eea;">---</code>
                 </div>
-                
-                <!-- Test page link (only for Maxou) -->
-                <div id="testPageLink" style="display: none; background: #e3f2fd; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 2px solid #2196f3;">
+
+                <!-- Section liste partagée active -->
+                <div id="sharedListSection" style="display:none; background:#f0f7ff; padding:15px; border-radius:10px; margin-bottom:12px; border:2px solid #667eea;">
+                    <p style="font-weight:600; color:#667eea; margin-bottom:8px;">👥 <span id="activeListName">Liste partagée</span></p>
+                    <div id="presenceContainer" style="font-size:13px; margin-bottom:10px;"></div>
+                    <div id="shareCodeSection" style="display:none; margin-bottom:10px;">
+                        <p style="font-size:12px; color:#666; margin-bottom:4px;">Code d'invitation :</p>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <code id="shareCodeDisplay" style="font-size:22px; font-weight:bold; color:#667eea; letter-spacing:4px;"></code>
+                            <button onclick="copyShareCode()" style="font-size:12px; padding:4px 10px; border:1px solid #667eea; background:white; color:#667eea; border-radius:5px; cursor:pointer;">Copier</button>
+                        </div>
+                    </div>
+                    <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                        <button onclick="showShareCode()" style="font-size:12px; padding:6px 12px; background:#667eea; color:white; border:none; border-radius:6px; cursor:pointer;">Voir le code</button>
+                        <button onclick="changeListDefault()" style="font-size:12px; padding:6px 12px; background:#28a745; color:white; border:none; border-radius:6px; cursor:pointer;">⭐ Par défaut</button>
+                        <button onclick="switchList()" style="font-size:12px; padding:6px 12px; background:#6c757d; color:white; border:none; border-radius:6px; cursor:pointer;">🔄 Changer</button>
+                        <button onclick="leaveSharedList()" style="font-size:12px; padding:6px 12px; background:#dc3545; color:white; border:none; border-radius:6px; cursor:pointer;">Quitter</button>
+                    </div>
+                </div>
+
+                <!-- Section créer/rejoindre (liste personnelle) -->
+                <div id="personalListSection" style="margin-bottom:12px;">
+                    <button onclick="createSharedList()" class="modal-confirm" style="width:100%; margin-bottom:8px;">
+                        🔗 Créer une liste partagée
+                    </button>
+                    <div style="display:flex; gap:8px;">
+                        <input type="text" id="joinCodeInput" placeholder="Code (ex: ABC123)" maxlength="6"
+                               style="flex:1; padding:10px; border:2px solid #e9ecef; border-radius:8px; font-size:15px; text-transform:uppercase; letter-spacing:2px; text-align:center;">
+                        <button onclick="joinSharedList()" class="modal-confirm" style="white-space:nowrap;">Rejoindre</button>
+                    </div>
+                </div>
+
+                <!-- Test page link -->
+                <div id="testPageLink" style="display: none; background: #e3f2fd; padding: 15px; border-radius: 10px; margin-bottom: 12px; border: 2px solid #2196f3;">
                     <p style="margin-bottom: 10px; color: #1976d2; font-weight: 600;">🧪 Mode Développeur</p>
                     <a href="tests.html" target="_blank" style="color: #667eea; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 5px;">
                         🔬 Ouvrir la page de tests
@@ -1192,6 +1260,12 @@
         let currentUser = null;
         let userId = null;
         let isFirebaseReady = false;
+
+        // Partage de liste
+        let activeListId = null;      // ID de la liste partagée active (null = liste perso)
+        let listUnsubscribe = null;   // Désabonnement onSnapshot
+        let presenceInterval = null;  // Heartbeat présence (60s)
+        let userListMemberships = []; // Toutes les listes dont l'utilisateur est membre
 
         // ========================================
         // AUTHENTICATION — Firebase Auth
@@ -1295,11 +1369,351 @@
             document.getElementById('displayUserCode').textContent = email;
             const testPageLink = document.getElementById('testPageLink');
             testPageLink.style.display = currentUser ? 'block' : 'none';
+            updateShareUI();
             document.getElementById('settingsModal').classList.add('show');
         }
 
         function closeSettingsModal() {
             document.getElementById('settingsModal').classList.remove('show');
+        }
+
+        // ========================================
+        // PARTAGE DE LISTE — Fonctions
+        // ========================================
+
+        function generateShortCode() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sans O,0,I,1 pour éviter confusion
+            let code = '';
+            for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+            return code;
+        }
+
+        function updateShareUI() {
+            const sharedSection = document.getElementById('sharedListSection');
+            const personalSection = document.getElementById('personalListSection');
+            if (!sharedSection || !personalSection) return;
+
+            if (activeListId) {
+                sharedSection.style.display = 'block';
+                personalSection.style.display = 'none';
+                // Afficher le nom de la liste active
+                db.collection('lists').doc(activeListId).get().then(doc => {
+                    if (doc.exists) {
+                        document.getElementById('activeListName').textContent = doc.data().name || 'Liste partagée';
+                    }
+                }).catch(() => {});
+            } else {
+                sharedSection.style.display = 'none';
+                personalSection.style.display = 'block';
+                document.getElementById('shareCodeSection').style.display = 'none';
+            }
+        }
+
+        async function createSharedList() {
+            if (!isFirebaseReady || !userId) return;
+            const listName = prompt('Nom de la liste partagée (ex: "Courses de la famille") :');
+            if (!listName || !listName.trim()) return;
+
+            const listRef = db.collection('lists').doc();
+            const email = currentUser.email || currentUser.displayName || 'Utilisateur';
+
+            await listRef.set({
+                name: listName.trim(),
+                groceryList: groceryList,
+                meals: meals,
+                collapsedCategories: collapsedCategories,
+                members: [userId],
+                memberEmails: { [userId]: email },
+                ownerId: userId,
+                presence: { [userId]: { email, lastSeen: firebase.firestore.FieldValue.serverTimestamp() } },
+                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            // Enregistrer dans le doc utilisateur
+            await db.collection('users').doc(userId).set({
+                listMemberships: firebase.firestore.FieldValue.arrayUnion(listRef.id)
+            }, { merge: true });
+            if (!userListMemberships.includes(listRef.id)) userListMemberships.push(listRef.id);
+
+            // Générer un code court unique
+            let code, codeExists = true;
+            while (codeExists) {
+                code = generateShortCode();
+                const existing = await db.collection('inviteCodes').doc(code).get();
+                codeExists = existing.exists;
+            }
+            await db.collection('inviteCodes').doc(code).set({
+                listId: listRef.id,
+                createdBy: userId,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            // Activer cette liste
+            activeListId = listRef.id;
+            subscribeToSharedList(activeListId);
+            startPresenceHeartbeat();
+            updateShareUI();
+
+            // Afficher le code
+            document.getElementById('shareCodeDisplay').textContent = code;
+            document.getElementById('shareCodeSection').style.display = 'block';
+        }
+
+        async function joinSharedList() {
+            const code = (document.getElementById('joinCodeInput').value || '').trim().toUpperCase();
+            if (!code || code.length !== 6) { alert('Entrez un code de 6 caractères.'); return; }
+
+            try {
+                const codeDoc = await db.collection('inviteCodes').doc(code).get();
+                if (!codeDoc.exists) { alert('Code invalide. Vérifiez et réessayez.'); return; }
+
+                const listId = codeDoc.data().listId;
+
+                // Vérifier si déjà membre
+                if (userListMemberships.includes(listId)) {
+                    activeListId = listId;
+                    subscribeToSharedList(activeListId);
+                    startPresenceHeartbeat();
+                    updateShareUI();
+                    document.getElementById('joinCodeInput').value = '';
+                    closeSettingsModal();
+                    return;
+                }
+
+                const email = currentUser.email || currentUser.displayName || 'Utilisateur';
+                await db.collection('lists').doc(listId).update({
+                    members: firebase.firestore.FieldValue.arrayUnion(userId),
+                    [`memberEmails.${userId}`]: email,
+                    [`presence.${userId}.email`]: email,
+                    [`presence.${userId}.lastSeen`]: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                await db.collection('users').doc(userId).set({
+                    listMemberships: firebase.firestore.FieldValue.arrayUnion(listId)
+                }, { merge: true });
+                if (!userListMemberships.includes(listId)) userListMemberships.push(listId);
+
+                activeListId = listId;
+                document.getElementById('joinCodeInput').value = '';
+                subscribeToSharedList(activeListId);
+                startPresenceHeartbeat();
+                updateShareUI();
+                closeSettingsModal();
+            } catch (e) {
+                console.error('Erreur joinSharedList:', e);
+                alert('Erreur lors de la connexion à la liste. Réessayez.');
+            }
+        }
+
+        async function leaveSharedList() {
+            if (!confirm('Quitter cette liste partagée ? Vos modifications resteront pour les autres membres.')) return;
+            const leavingId = activeListId;
+
+            await updatePresence(false);
+            await db.collection('lists').doc(leavingId).update({
+                members: firebase.firestore.FieldValue.arrayRemove(userId)
+            });
+            await db.collection('users').doc(userId).set({
+                listMemberships: firebase.firestore.FieldValue.arrayRemove(leavingId),
+                defaultListId: firebase.firestore.FieldValue.delete()
+            }, { merge: true });
+            userListMemberships = userListMemberships.filter(id => id !== leavingId);
+
+            activeListId = null;
+            if (listUnsubscribe) { listUnsubscribe(); listUnsubscribe = null; }
+            stopPresenceHeartbeat();
+
+            await initializeDefaultItems();
+            renderCategories();
+            renderMeals();
+            updateShareUI();
+        }
+
+        async function showShareCode() {
+            if (!activeListId) return;
+            try {
+                const codeSnap = await db.collection('inviteCodes')
+                    .where('listId', '==', activeListId).limit(1).get();
+                if (!codeSnap.empty) {
+                    document.getElementById('shareCodeDisplay').textContent = codeSnap.docs[0].id;
+                    document.getElementById('shareCodeSection').style.display = 'block';
+                } else {
+                    alert('Aucun code trouvé pour cette liste.');
+                }
+            } catch (e) {
+                console.error('Erreur showShareCode:', e);
+            }
+        }
+
+        function copyShareCode() {
+            const code = document.getElementById('shareCodeDisplay').textContent;
+            if (!code) return;
+            navigator.clipboard.writeText(code)
+                .then(() => alert('✅ Code "' + code + '" copié !'))
+                .catch(() => alert('Code : ' + code));
+        }
+
+        async function changeListDefault() {
+            if (!activeListId) return;
+            await db.collection('users').doc(userId).set({
+                defaultListId: activeListId
+            }, { merge: true });
+            alert('✅ Cette liste s\'ouvrira par défaut à la prochaine connexion.');
+        }
+
+        async function switchList() {
+            closeSettingsModal();
+            if (listUnsubscribe) { listUnsubscribe(); listUnsubscribe = null; }
+            stopPresenceHeartbeat();
+            activeListId = null;
+            await showListPicker();
+        }
+
+        async function showListPicker() {
+            if (!isFirebaseReady || userListMemberships.length === 0) {
+                // Pas de listes partagées, ouvrir la liste personnelle directement
+                await initializeDefaultItems();
+                renderCategories();
+                renderMeals();
+                updateShareUI();
+                return;
+            }
+
+            const listDocs = await Promise.all(
+                userListMemberships.map(id => db.collection('lists').doc(id).get())
+            );
+
+            const container = document.getElementById('listPickerItems');
+            const validDocs = listDocs.filter(doc => doc.exists && doc.data().members && doc.data().members.includes(userId));
+
+            container.innerHTML = validDocs.map(doc => {
+                const data = doc.data();
+                const memberCount = (data.members || []).length;
+                return `<div class="list-picker-item" onclick="selectList('${doc.id}')">
+                    <span class="list-picker-icon">📋</span>
+                    <div>
+                        <div class="list-picker-name">${escapeHtml(data.name || 'Liste sans nom')}</div>
+                        <div class="list-picker-members">${memberCount} membre${memberCount > 1 ? 's' : ''}</div>
+                    </div>
+                </div>`;
+            }).join('') + `
+                <div class="list-picker-item" onclick="selectList(null)">
+                    <span class="list-picker-icon">👤</span>
+                    <div>
+                        <div class="list-picker-name">Ma liste personnelle</div>
+                        <div class="list-picker-members">Utilisation privée</div>
+                    </div>
+                </div>`;
+
+            document.getElementById('listPickerModal').classList.add('show');
+        }
+
+        async function selectList(listId) {
+            document.getElementById('listPickerModal').classList.remove('show');
+            activeListId = listId || null;
+
+            if (activeListId) {
+                if (confirm('Définir cette liste comme liste par défaut ?')) {
+                    await db.collection('users').doc(userId).set({
+                        defaultListId: activeListId
+                    }, { merge: true });
+                }
+                subscribeToSharedList(activeListId);
+                await updatePresence(true);
+                startPresenceHeartbeat();
+            } else {
+                // Effacer le défaut si on choisit la liste perso
+                await db.collection('users').doc(userId).set({
+                    defaultListId: null
+                }, { merge: true });
+                await initializeDefaultItems();
+            }
+
+            renderCategories();
+            renderMeals();
+            updateArticlesCollapseState();
+            updateShareUI();
+        }
+
+        // Présence
+        async function updatePresence(online) {
+            if (!isFirebaseReady || !activeListId || !userId || !db) return;
+            try {
+                const presenceData = {
+                    [`presence.${userId}.email`]: currentUser.email || currentUser.displayName || 'Utilisateur',
+                    [`presence.${userId}.lastSeen`]: online
+                        ? firebase.firestore.FieldValue.serverTimestamp()
+                        : new Date(0)
+                };
+                await db.collection('lists').doc(activeListId).update(presenceData);
+            } catch (e) { /* Silencieux */ }
+        }
+
+        function startPresenceHeartbeat() {
+            stopPresenceHeartbeat();
+            presenceInterval = setInterval(() => updatePresence(true), 60000);
+        }
+
+        function stopPresenceHeartbeat() {
+            if (presenceInterval) { clearInterval(presenceInterval); presenceInterval = null; }
+        }
+
+        function renderPresenceIndicators(presence, memberEmails) {
+            const container = document.getElementById('presenceContainer');
+            if (!container || !presence) return;
+            const now = Date.now();
+            const threshold = 3 * 60 * 1000; // 3 minutes
+
+            const html = Object.entries(presence).map(([uid, data]) => {
+                const lastSeen = data.lastSeen && data.lastSeen.toMillis ? data.lastSeen.toMillis() : 0;
+                const isOnline = (now - lastSeen) < threshold;
+                const email = data.email || memberEmails?.[uid] || 'Utilisateur';
+                const name = email.split('@')[0];
+                const isMe = uid === userId;
+                return `<span class="presence-dot ${isOnline ? 'online' : 'offline'}" title="${escapeHtml(email)}">
+                    ● ${escapeHtml(name)}${isMe ? ' (vous)' : ''}
+                </span>`;
+            }).join('');
+
+            container.innerHTML = html;
+        }
+
+        // onSnapshot — abonnement temps réel à une liste partagée
+        function subscribeToSharedList(listId) {
+            if (listUnsubscribe) listUnsubscribe();
+
+            listUnsubscribe = db.collection('lists').doc(listId).onSnapshot((doc) => {
+                if (!doc.exists) return;
+                const data = doc.data();
+
+                if (data.groceryList) {
+                    groceryList = data.groceryList;
+                    localStorage.setItem('groceryList', JSON.stringify(groceryList));
+                }
+                if (data.meals) {
+                    meals = data.meals;
+                    localStorage.setItem('meals', JSON.stringify(meals));
+                }
+
+                renderCategories();
+                renderMeals();
+
+                if (data.presence) {
+                    renderPresenceIndicators(data.presence, data.memberEmails);
+                }
+
+                updateSyncStatus('synced');
+            }, (error) => {
+                console.error('onSnapshot error:', error);
+                updateSyncStatus('error');
+            });
+        }
+
+        async function checkListMembership(listId) {
+            try {
+                const doc = await db.collection('lists').doc(listId).get();
+                return doc.exists && (doc.data().members || []).includes(userId);
+            } catch { return false; }
         }
 
         // Initialize Firebase when the page loads
@@ -1606,7 +2020,7 @@
 
             try {
                 updateSyncStatus('syncing');
-                
+
                 const dataToSave = {
                     groceryList: groceryList,
                     meals: meals,
@@ -1614,7 +2028,15 @@
                     lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                 };
 
-                await db.collection('users').doc(userId).set(dataToSave, { merge: true });
+                if (activeListId) {
+                    // Liste partagée → écrire dans lists/{activeListId} + mettre à jour présence
+                    dataToSave[`presence.${userId}.lastSeen`] = firebase.firestore.FieldValue.serverTimestamp();
+                    await db.collection('lists').doc(activeListId).set(dataToSave, { merge: true });
+                } else {
+                    // Liste personnelle → écrire dans users/{userId}
+                    await db.collection('users').doc(userId).set(dataToSave, { merge: true });
+                }
+
                 console.log('✅ Données sauvegardées sur Firebase');
                 updateSyncStatus('synced');
             } catch (error) {
@@ -2845,13 +3267,55 @@
 
                 await migrateLocalDataIfNeeded();
 
-                await initializeDefaultItems();
+                // Charger les préférences utilisateur (listes membres + liste par défaut)
+                let defaultListId = null;
+                if (isFirebaseReady) {
+                    try {
+                        const userDoc = await db.collection('users').doc(userId).get();
+                        const userData = userDoc.exists ? userDoc.data() : {};
+                        userListMemberships = userData.listMemberships || [];
+                        defaultListId = userData.defaultListId || null;
+                    } catch (e) {
+                        console.error('Erreur lecture préférences utilisateur:', e);
+                    }
+                }
+
+                // Décider quelle liste ouvrir
+                if (defaultListId) {
+                    // Liste par défaut configurée → vérifier qu'elle est valide
+                    const valid = await checkListMembership(defaultListId);
+                    if (valid) {
+                        activeListId = defaultListId;
+                    }
+                } else if (userListMemberships.length === 1) {
+                    // Une seule liste partagée → l'ouvrir directement
+                    const valid = await checkListMembership(userListMemberships[0]);
+                    if (valid) activeListId = userListMemberships[0];
+                } else if (userListMemberships.length > 1) {
+                    // Plusieurs listes sans défaut → afficher le sélecteur
+                    await showListPicker();
+                    return; // showListPicker → selectList → continue l'init
+                }
+
+                if (activeListId) {
+                    subscribeToSharedList(activeListId);
+                    await updatePresence(true);
+                    startPresenceHeartbeat();
+                } else {
+                    await initializeDefaultItems();
+                }
+
                 renderCategories();
                 renderMeals();
                 updateArticlesCollapseState();
+                updateShareUI();
             } else {
+                stopPresenceHeartbeat();
+                if (listUnsubscribe) { listUnsubscribe(); listUnsubscribe = null; }
                 currentUser = null;
                 userId = null;
+                activeListId = null;
+                userListMemberships = [];
                 isFirebaseReady = false;
                 document.getElementById('authModal').classList.add('show');
             }
@@ -2945,11 +3409,8 @@
 
         // Force save to Firebase before closing the app/browser
         window.addEventListener('beforeunload', function(event) {
-            // If there's a pending save (timer running), force it immediately
             if (saveTimeout) {
                 clearTimeout(saveTimeout);
-                
-                // Force immediate Firebase save
                 if (isFirebaseReady && db && userId) {
                     const dataToSave = {
                         groceryList: groceryList,
@@ -2957,11 +3418,19 @@
                         collapsedCategories: collapsedCategories,
                         lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                     };
-                    
-                    // Use synchronous approach for beforeunload
-                    db.collection('users').doc(userId).set(dataToSave, { merge: true });
+                    if (activeListId) {
+                        dataToSave[`presence.${userId}.lastSeen`] = new Date(0);
+                        db.collection('lists').doc(activeListId).set(dataToSave, { merge: true });
+                    } else {
+                        db.collection('users').doc(userId).set(dataToSave, { merge: true });
+                    }
                     console.log('💾 Sauvegarde forcée avant fermeture');
                 }
+            } else if (isFirebaseReady && activeListId && userId) {
+                // Marquer comme hors-ligne même sans sauvegarde en attente
+                db.collection('lists').doc(activeListId).update({
+                    [`presence.${userId}.lastSeen`]: new Date(0)
+                });
             }
         });
 
