@@ -1132,11 +1132,15 @@
     </div>
 
     <!-- List Picker Modal -->
-    <div id="listPickerModal" class="auth-modal">
+    <div id="listPickerModal" class="auth-modal" onclick="if(event.target===this) closeListPicker()">
         <div class="auth-modal-content">
-            <div class="auth-modal-header">📋 Choisir une liste</div>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:15px;">
+                <div class="auth-modal-header" style="margin-bottom:0;">📋 Choisir une liste</div>
+                <button onclick="closeListPicker()" title="Fermer" style="background:none; border:none; font-size:22px; cursor:pointer; color:#999; line-height:1; padding:0 4px;">✕</button>
+            </div>
             <p style="color:#666; font-size:14px; margin-bottom:15px;">Sélectionnez la liste à ouvrir :</p>
             <div id="listPickerItems"></div>
+            <button onclick="closeListPicker()" style="width:100%; margin-top:10px; padding:10px; background:none; border:2px solid #e9ecef; border-radius:8px; color:#666; font-size:14px; cursor:pointer;">Annuler</button>
         </div>
     </div>
 
@@ -1657,6 +1661,22 @@
                 </div>`;
 
             document.getElementById('listPickerModal').classList.add('show');
+        }
+
+        function closeListPicker() {
+            document.getElementById('listPickerModal').classList.remove('show');
+            // Si aucune liste n'est encore active (ex: appel depuis onAuthStateChanged),
+            // revenir à la liste personnelle pour que l'app s'initialise correctement
+            if (!activeListId) {
+                initializeDefaultItems().then(() => {
+                    renderCategories();
+                    renderMeals();
+                    updateArticlesCollapseState();
+                    updateShareUI();
+                });
+            }
+            // Si une liste est déjà active (ex: appel depuis switchList),
+            // on ne change rien et on reste sur la liste courante
         }
 
         async function selectList(listId) {
