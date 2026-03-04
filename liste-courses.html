@@ -746,6 +746,151 @@
             color: #6c757d;
         }
 
+        /* Meal section header buttons */
+        .meals-header-buttons {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .add-section-btn {
+            padding: 10px 16px;
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .add-section-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        /* Meal sections */
+        .meal-section {
+            margin-bottom: 10px;
+        }
+
+        .meal-section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-bottom: 2px solid #e0e4ff;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.3s;
+            border-radius: 10px;
+            background: #f0f2ff;
+        }
+
+        .meal-section-header:hover {
+            background: #e4e8ff;
+        }
+
+        .meal-section-header.collapsed {
+            margin-bottom: 0;
+            border-bottom: none;
+        }
+
+        .meal-section-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #555;
+            flex: 1;
+        }
+
+        .meal-section-count {
+            background: #d4daff;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .meal-section-actions {
+            position: relative;
+        }
+
+        .meal-section-items {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding-top: 8px;
+            max-height: 5000px;
+            transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+            opacity: 1;
+        }
+
+        .meal-section-items.collapsed {
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            padding-top: 0;
+        }
+
+        .meal-unsectioned {
+            margin-bottom: 10px;
+        }
+
+        .meal-unsectioned-label {
+            font-size: 13px;
+            color: #999;
+            padding: 5px 10px;
+            font-style: italic;
+        }
+
+        .meal-section.drag-over-section {
+            outline: 2px dashed #667eea;
+            outline-offset: 2px;
+            border-radius: 10px;
+        }
+
+        .meal-section.dragging-section {
+            opacity: 0.5;
+        }
+
+        /* Emoji picker for section icons */
+        .emoji-picker {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-bottom: 15px;
+            justify-content: center;
+        }
+
+        .emoji-option {
+            width: 42px;
+            height: 42px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            background: white;
+            font-size: 22px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            padding: 0;
+        }
+
+        .emoji-option:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+            transform: scale(1.1);
+        }
+
+        .emoji-option.selected {
+            border-color: #667eea;
+            background: #f0f2ff;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3);
+        }
+
         /* Meal creation modal */
         .meal-modal-content {
             max-width: 500px;
@@ -1008,7 +1153,10 @@
                     🍽️ Mes Plats
                     <span class="category-chevron" id="mealsChevron" style="margin-left: 10px; font-size: 14px; transition: transform 0.3s;">▼</span>
                 </div>
-                <button class="add-meal-btn" onclick="event.stopPropagation(); openMealModal()">+ Nouveau plat</button>
+                <div class="meals-header-buttons">
+                    <button class="add-section-btn" onclick="event.stopPropagation(); openCreateSectionModal()" title="Nouvelle section">+ Section</button>
+                    <button class="add-meal-btn" onclick="event.stopPropagation(); openMealModal()">+ Nouveau plat</button>
+                </div>
             </div>
             <div class="meals-list" id="mealsList"></div>
         </div>
@@ -1123,10 +1271,63 @@
         <div class="modal-content meal-modal-content">
             <div class="modal-header" id="mealModalHeader">Créer un nouveau plat</div>
             <input type="text" class="rename-input" id="mealNameInput" placeholder="Nom du plat...">
+            <select class="rename-input" id="mealSectionSelect" style="margin-bottom: 15px; height: 45px;">
+                <option value="">Aucune section</option>
+            </select>
             <div class="ingredient-selector" id="ingredientSelector"></div>
             <div class="modal-buttons">
                 <button class="modal-confirm" id="mealConfirmBtn" onclick="confirmMeal()">Créer le plat</button>
                 <button class="modal-cancel" onclick="closeMealModal()">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for creating/renaming meal sections -->
+    <div id="mealSectionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header" id="mealSectionModalHeader">Nouvelle section</div>
+            <div class="emoji-picker" id="sectionEmojiPicker">
+                <button type="button" class="emoji-option selected" onclick="selectSectionEmoji('📁', this)">📁</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🍕', this)">🍕</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🍝', this)">🍝</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🍣', this)">🍣</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🍜', this)">🍜</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🥗', this)">🥗</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🍔', this)">🍔</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🌮', this)">🌮</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🥘', this)">🥘</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🍰', this)">🍰</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🧁', this)">🧁</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🍩', this)">🍩</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🎂', this)">🎂</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🥐', this)">🥐</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🍳', this)">🍳</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🥩', this)">🥩</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🐟', this)">🐟</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🥬', this)">🥬</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🍎', this)">🍎</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('❄️', this)">❄️</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🍹', this)">🍹</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🏠', this)">🏠</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('⭐', this)">⭐</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('❤️', this)">❤️</button>
+            </div>
+            <input type="hidden" id="sectionEmojiValue" value="📁">
+            <input type="text" class="rename-input" id="mealSectionNameInput" placeholder="Nom de la section...">
+            <div class="modal-buttons">
+                <button class="modal-confirm" id="mealSectionConfirmBtn" onclick="confirmMealSection()">Créer</button>
+                <button class="modal-cancel" onclick="closeMealSectionModal()">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for moving meal to section -->
+    <div id="moveMealSectionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Déplacer vers une section</div>
+            <div class="modal-categories" id="mealSectionPickerList"></div>
+            <div class="modal-buttons">
+                <button class="modal-cancel" onclick="closeMoveMealSectionModal()">Annuler</button>
             </div>
         </div>
     </div>
@@ -1472,6 +1673,8 @@
                 name: listName.trim(),
                 groceryList: groceryList,
                 meals: meals,
+                mealSections: mealSections,
+                mealSectionOrder: mealSectionOrder,
                 collapsedCategories: collapsedCategories,
                 members: [userId],
                 memberEmails: { [userId]: email },
@@ -1765,6 +1968,14 @@
                     meals = data.meals;
                     localStorage.setItem('meals', JSON.stringify(meals));
                 }
+                if (data.mealSections) {
+                    mealSections = data.mealSections;
+                    localStorage.setItem('mealSections', JSON.stringify(mealSections));
+                }
+                if (data.mealSectionOrder) {
+                    mealSectionOrder = data.mealSectionOrder;
+                    localStorage.setItem('mealSectionOrder', JSON.stringify(mealSectionOrder));
+                }
 
                 renderCategories();
                 renderMeals();
@@ -1820,6 +2031,9 @@
         let searchTerm = '';
         let collapsedCategories = {};
         let meals = {};
+        let mealSections = {};           // { sectionId: { name: "Plats italiens" } }
+        let mealSectionOrder = [];       // Ordre d'affichage des sections
+        let collapsedMealSections = {};  // { sectionId: true/false }
         let mealsCollapsed = false;
         let articlesCollapsed = false;
 
@@ -1828,6 +2042,9 @@
             const savedCollapsed = localStorage.getItem('collapsedCategories');
             const saved = localStorage.getItem('groceryList');
             const savedMeals = localStorage.getItem('meals');
+            const savedMealSections = localStorage.getItem('mealSections');
+            const savedMealSectionOrder = localStorage.getItem('mealSectionOrder');
+            const savedCollapsedMealSections = localStorage.getItem('collapsedMealSections');
             const savedMealsCollapsed = localStorage.getItem('mealsCollapsed');
             const savedArticlesCollapsed = localStorage.getItem('articlesCollapsed');
             
@@ -1857,7 +2074,16 @@
             if (savedMeals) {
                 meals = JSON.parse(savedMeals);
             }
-            
+            if (savedMealSections) {
+                mealSections = JSON.parse(savedMealSections);
+            }
+            if (savedMealSectionOrder) {
+                mealSectionOrder = JSON.parse(savedMealSectionOrder);
+            }
+            if (savedCollapsedMealSections) {
+                collapsedMealSections = JSON.parse(savedCollapsedMealSections);
+            }
+
             if (saved) {
                 groceryList = JSON.parse(saved);
                 
@@ -2067,6 +2293,9 @@
             localStorage.setItem('groceryList', JSON.stringify(groceryList));
             localStorage.setItem('collapsedCategories', JSON.stringify(collapsedCategories));
             localStorage.setItem('meals', JSON.stringify(meals));
+            localStorage.setItem('mealSections', JSON.stringify(mealSections));
+            localStorage.setItem('mealSectionOrder', JSON.stringify(mealSectionOrder));
+            localStorage.setItem('collapsedMealSections', JSON.stringify(collapsedMealSections));
             localStorage.setItem('mealsCollapsed', mealsCollapsed.toString());
             localStorage.setItem('articlesCollapsed', articlesCollapsed.toString());
             
@@ -2095,6 +2324,8 @@
                 const dataToSave = {
                     groceryList: groceryList,
                     meals: meals,
+                    mealSections: mealSections,
+                    mealSectionOrder: mealSectionOrder,
                     collapsedCategories: collapsedCategories,
                     lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                 };
@@ -2167,11 +2398,15 @@
                     
                     if (data.groceryList) groceryList = data.groceryList;
                     if (data.meals) meals = data.meals;
+                    if (data.mealSections) mealSections = data.mealSections;
+                    if (data.mealSectionOrder) mealSectionOrder = data.mealSectionOrder;
                     if (data.collapsedCategories) collapsedCategories = data.collapsedCategories;
-                    
+
                     // Save to localStorage as backup
                     localStorage.setItem('groceryList', JSON.stringify(groceryList));
                     localStorage.setItem('meals', JSON.stringify(meals));
+                    localStorage.setItem('mealSections', JSON.stringify(mealSections));
+                    localStorage.setItem('mealSectionOrder', JSON.stringify(mealSectionOrder));
                     localStorage.setItem('collapsedCategories', JSON.stringify(collapsedCategories));
                     
                     updateSyncStatus('synced');
@@ -2503,11 +2738,63 @@
         }
 
         // Meal management functions
+        function renderMealItem(mealId) {
+            const meal = meals[mealId];
+            const ingredientCount = meal.ingredients.length;
+            const ingredientNames = meal.ingredients.map(ing => {
+                const items = groceryList[ing.category] || [];
+                const item = items.find(i => String(i.id) === String(ing.itemId));
+                return item ? escapeHtml(item.name) : '';
+            }).filter(Boolean).slice(0, 3).join(', ');
+            const moreText = ingredientCount > 3 ? ` +${ingredientCount - 3} autres` : '';
+
+            const hasSections = mealSectionOrder.length > 0;
+            const moveToSectionBtn = hasSections ? `
+                <button class="item-dropdown-item move" onclick="openMoveMealToSectionModal('${mealId}'); closeAllMealMenus();">
+                    📂 Déplacer vers section
+                </button>
+            ` : '';
+
+            return `
+                <div class="meal-item ${meal.selected ? 'selected' : ''}"
+                     id="meal-${mealId}"
+                     draggable="true"
+                     data-meal-id="${mealId}"
+                     data-section-id="${meal.sectionId || ''}">
+                    <span class="drag-handle" style="cursor: grab; color: #adb5bd; margin-right: 8px;">⋮⋮</span>
+                    <input type="checkbox" class="meal-checkbox"
+                           ${meal.selected ? 'checked' : ''}
+                           onchange="toggleMeal('${mealId}')">
+                    <div class="meal-info">
+                        <div class="meal-name">${escapeHtml(meal.name)}</div>
+                        <div class="meal-ingredients">${ingredientNames}${moreText}</div>
+                    </div>
+                    <div class="item-actions">
+                        <button class="item-menu-btn" onclick="toggleMealMenu(event, '${mealId}')" title="Actions">
+                            ⋮
+                        </button>
+                        <div class="item-dropdown" id="meal-menu-${mealId}">
+                            <button class="item-dropdown-item rename" onclick="openRenameMealModal('${mealId}'); closeAllMealMenus();">
+                                ✏️ Renommer
+                            </button>
+                            <button class="item-dropdown-item move" onclick="openEditMealModal('${mealId}'); closeAllMealMenus();">
+                                🍴 Modifier ingrédients
+                            </button>
+                            ${moveToSectionBtn}
+                            <button class="item-dropdown-item delete" onclick="deleteMeal('${mealId}'); closeAllMealMenus();">
+                                🗑️ Supprimer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
         function renderMeals() {
             const container = document.getElementById('mealsList');
             const mealKeys = Object.keys(meals);
 
-            if (mealKeys.length === 0) {
+            if (mealKeys.length === 0 && mealSectionOrder.length === 0) {
                 container.innerHTML = `
                     <div class="meals-empty">
                         Aucun plat créé. Cliquez sur "+ Nouveau plat" pour commencer.
@@ -2516,53 +2803,70 @@
                 return;
             }
 
-            container.innerHTML = mealKeys.map(mealId => {
-                const meal = meals[mealId];
-                const ingredientCount = meal.ingredients.length;
-                const ingredientNames = meal.ingredients.map(ing => {
-                    const items = groceryList[ing.category] || [];
-                    // Compare as strings to handle both number and string IDs
-                    const item = items.find(i => String(i.id) === String(ing.itemId));
-                    return item ? escapeHtml(item.name) : '';
-                }).filter(Boolean).slice(0, 3).join(', ');
-                const moreText = ingredientCount > 3 ? ` +${ingredientCount - 3} autres` : '';
+            let html = '';
 
-                return `
-                    <div class="meal-item ${meal.selected ? 'selected' : ''}" 
-                         id="meal-${mealId}"
-                         draggable="true"
-                         data-meal-id="${mealId}">
-                        <span class="drag-handle" style="cursor: grab; color: #adb5bd; margin-right: 8px;">⋮⋮</span>
-                        <input type="checkbox" class="meal-checkbox" 
-                               ${meal.selected ? 'checked' : ''}
-                               onchange="toggleMeal(${mealId})">
-                        <div class="meal-info">
-                            <div class="meal-name">${escapeHtml(meal.name)}</div>
-                            <div class="meal-ingredients">${ingredientNames}${moreText}</div>
-                        </div>
-                        <div class="item-actions">
-                            <button class="item-menu-btn" onclick="toggleMealMenu(event, ${mealId})" title="Actions">
-                                ⋮
-                            </button>
-                            <div class="item-dropdown" id="meal-menu-${mealId}">
-                                <button class="item-dropdown-item rename" onclick="openRenameMealModal(${mealId}); closeAllMealMenus();">
-                                    ✏️ Renommer
+            // 1. Unsectioned meals (no sectionId or section deleted)
+            const unsectionedMeals = mealKeys.filter(id => {
+                const sectionId = meals[id].sectionId;
+                return !sectionId || !mealSections[sectionId];
+            });
+
+            if (unsectionedMeals.length > 0) {
+                html += '<div class="meal-unsectioned" data-section-id="">';
+                if (mealSectionOrder.length > 0) {
+                    html += '<div class="meal-unsectioned-label">Sans section</div>';
+                }
+                html += unsectionedMeals.map(mealId => renderMealItem(mealId)).join('');
+                html += '</div>';
+            }
+
+            // 2. Each section in order
+            const validSectionOrder = mealSectionOrder.filter(id => mealSections[id]);
+
+            validSectionOrder.forEach(sectionId => {
+                const section = mealSections[sectionId];
+                const sectionMeals = mealKeys.filter(id => meals[id].sectionId === sectionId);
+                const isCollapsed = collapsedMealSections[sectionId] || false;
+
+                html += `
+                    <div class="meal-section" data-section-id="${sectionId}" draggable="true">
+                        <div class="meal-section-header ${isCollapsed ? 'collapsed' : ''}"
+                             data-section-id="${sectionId}"
+                             onclick="toggleMealSection('${sectionId}')">
+                            <span class="drag-handle" style="cursor: grab; color: #adb5bd;"
+                                  onmousedown="event.stopPropagation()">⋮⋮</span>
+                            <span class="meal-section-title">${escapeHtml(section.icon || '📁')} ${escapeHtml(section.name)}</span>
+                            <span class="meal-section-count">${sectionMeals.length}</span>
+                            <span class="category-chevron ${isCollapsed ? 'collapsed' : ''}" style="font-size: 14px; transition: transform 0.3s;">▼</span>
+                            <div class="meal-section-actions" onclick="event.stopPropagation()">
+                                <button class="item-menu-btn" onclick="toggleSectionMenu(event, '${sectionId}')" title="Actions">
+                                    ⋮
                                 </button>
-                                <button class="item-dropdown-item move" onclick="openEditMealModal(${mealId}); closeAllMealMenus();">
-                                    🍴 Modifier ingrédients
-                                </button>
-                                <button class="item-dropdown-item delete" onclick="deleteMeal(${mealId}); closeAllMealMenus();">
-                                    🗑️ Supprimer
-                                </button>
+                                <div class="item-dropdown" id="section-menu-${sectionId}">
+                                    <button class="item-dropdown-item rename" onclick="openRenameSectionModal('${sectionId}'); closeAllMealMenus();">
+                                        ✏️ Renommer
+                                    </button>
+                                    <button class="item-dropdown-item delete" onclick="deleteMealSection('${sectionId}'); closeAllMealMenus();">
+                                        🗑️ Supprimer la section
+                                    </button>
+                                </div>
                             </div>
+                        </div>
+                        <div class="meal-section-items ${isCollapsed ? 'collapsed' : ''}" data-section-id="${sectionId}">
+                            ${sectionMeals.length > 0
+                                ? sectionMeals.map(mealId => renderMealItem(mealId)).join('')
+                                : '<div class="meals-empty" style="padding: 15px; font-size: 13px;">Aucun plat dans cette section</div>'
+                            }
                         </div>
                     </div>
                 `;
-            }).join('');
+            });
 
-            // Apply collapsed state
+            container.innerHTML = html;
+
+            // Apply collapsed state for overall meals section
             updateMealsCollapseState();
-            
+
             // Initialize drag and drop for meals
             initializeMealsDragAndDrop();
         }
@@ -2584,6 +2888,237 @@
                 mealsList.classList.remove('collapsed');
                 if (chevron) chevron.classList.remove('collapsed');
             }
+        }
+
+        // ========================================
+        // MEAL SECTIONS CRUD
+        // ========================================
+        let currentRenameSectionId = null;
+        let currentMoveMealToSectionId = null;
+
+        function selectSectionEmoji(emoji, btn) {
+            document.getElementById('sectionEmojiValue').value = emoji;
+            document.querySelectorAll('#sectionEmojiPicker .emoji-option').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+        }
+
+        function openCreateSectionModal() {
+            const modal = document.getElementById('mealSectionModal');
+            const header = document.getElementById('mealSectionModalHeader');
+            const input = document.getElementById('mealSectionNameInput');
+            const confirmBtn = document.getElementById('mealSectionConfirmBtn');
+
+            header.textContent = 'Nouvelle section';
+            confirmBtn.textContent = 'Créer';
+            confirmBtn.onclick = confirmCreateSection;
+            input.value = '';
+            currentRenameSectionId = null;
+
+            // Reset emoji picker to default 📁
+            document.getElementById('sectionEmojiValue').value = '📁';
+            document.querySelectorAll('#sectionEmojiPicker .emoji-option').forEach(b => b.classList.remove('selected'));
+            const defaultBtn = document.querySelector('#sectionEmojiPicker .emoji-option');
+            if (defaultBtn) defaultBtn.classList.add('selected');
+
+            modal.classList.add('show');
+            setTimeout(() => input.focus(), 100);
+        }
+
+        function closeMealSectionModal() {
+            document.getElementById('mealSectionModal').classList.remove('show');
+            currentRenameSectionId = null;
+        }
+
+        function confirmMealSection() {
+            if (currentRenameSectionId !== null) {
+                confirmRenameSection();
+            } else {
+                confirmCreateSection();
+            }
+        }
+
+        function confirmCreateSection() {
+            const name = document.getElementById('mealSectionNameInput').value.trim();
+            if (!name) {
+                alert('Veuillez entrer un nom pour la section');
+                return;
+            }
+            const icon = document.getElementById('sectionEmojiValue').value || '📁';
+            const sectionId = String(Date.now());
+            mealSections[sectionId] = { name: name, icon: icon };
+            mealSectionOrder.push(sectionId);
+            closeMealSectionModal();
+            saveToLocalStorage();
+            renderMeals();
+        }
+
+        function openRenameSectionModal(sectionId) {
+            currentRenameSectionId = sectionId;
+            const section = mealSections[sectionId];
+            if (!section) return;
+
+            const modal = document.getElementById('mealSectionModal');
+            const header = document.getElementById('mealSectionModalHeader');
+            const input = document.getElementById('mealSectionNameInput');
+            const confirmBtn = document.getElementById('mealSectionConfirmBtn');
+
+            header.textContent = 'Renommer la section';
+            confirmBtn.textContent = 'Renommer';
+            confirmBtn.onclick = confirmRenameSection;
+            input.value = section.name;
+
+            // Pre-select current emoji
+            const currentIcon = section.icon || '📁';
+            document.getElementById('sectionEmojiValue').value = currentIcon;
+            document.querySelectorAll('#sectionEmojiPicker .emoji-option').forEach(b => {
+                b.classList.toggle('selected', b.textContent.trim() === currentIcon);
+            });
+
+            modal.classList.add('show');
+            setTimeout(() => { input.focus(); input.select(); }, 100);
+        }
+
+        function confirmRenameSection() {
+            if (currentRenameSectionId === null) return;
+            const newName = document.getElementById('mealSectionNameInput').value.trim();
+            if (newName && mealSections[currentRenameSectionId]) {
+                const icon = document.getElementById('sectionEmojiValue').value || '📁';
+                mealSections[currentRenameSectionId].name = newName;
+                mealSections[currentRenameSectionId].icon = icon;
+                saveToLocalStorage();
+                renderMeals();
+            }
+            closeMealSectionModal();
+        }
+
+        function deleteMealSection(sectionId) {
+            const section = mealSections[sectionId];
+            if (!section) return;
+
+            const mealsInSection = Object.keys(meals).filter(id => meals[id].sectionId === sectionId);
+            const message = mealsInSection.length > 0
+                ? `Supprimer la section "${section.name}" ?\n\nLes ${mealsInSection.length} plat(s) qu'elle contient seront déplacés hors de toute section.`
+                : `Supprimer la section "${section.name}" ?`;
+
+            if (confirm(message)) {
+                mealsInSection.forEach(mealId => {
+                    delete meals[mealId].sectionId;
+                });
+                delete mealSections[sectionId];
+                mealSectionOrder = mealSectionOrder.filter(id => id !== sectionId);
+                delete collapsedMealSections[sectionId];
+                saveToLocalStorage();
+                renderMeals();
+            }
+        }
+
+        function toggleMealSection(sectionId) {
+            collapsedMealSections[sectionId] = !collapsedMealSections[sectionId];
+            saveToLocalStorage();
+
+            const header = document.querySelector(`.meal-section-header[data-section-id="${sectionId}"]`);
+            if (header) {
+                const itemsList = header.nextElementSibling;
+                const chevron = header.querySelector('.category-chevron');
+                if (collapsedMealSections[sectionId]) {
+                    header.classList.add('collapsed');
+                    if (itemsList) itemsList.classList.add('collapsed');
+                    if (chevron) chevron.classList.add('collapsed');
+                } else {
+                    header.classList.remove('collapsed');
+                    if (itemsList) itemsList.classList.remove('collapsed');
+                    if (chevron) chevron.classList.remove('collapsed');
+                }
+            }
+        }
+
+        function toggleSectionMenu(event, sectionId) {
+            event.stopPropagation();
+            const menuId = `section-menu-${sectionId}`;
+            const menu = document.getElementById(menuId);
+            const button = event.target;
+
+            document.querySelectorAll('.item-dropdown').forEach(dropdown => {
+                if (dropdown.id !== menuId) {
+                    dropdown.classList.remove('show');
+                    dropdown.classList.remove('open-upward');
+                }
+            });
+            document.querySelectorAll('.item-menu-btn').forEach(btn => {
+                if (btn !== button) btn.classList.remove('active');
+            });
+
+            menu.classList.toggle('show');
+            button.classList.toggle('active');
+
+            if (menu.classList.contains('show')) {
+                setTimeout(() => {
+                    const rect = menu.getBoundingClientRect();
+                    if (rect.bottom > window.innerHeight - 20) {
+                        menu.classList.add('open-upward');
+                    } else {
+                        menu.classList.remove('open-upward');
+                    }
+                }, 10);
+            }
+        }
+
+        // ========================================
+        // MOVE MEAL TO SECTION
+        // ========================================
+        function openMoveMealToSectionModal(mealId) {
+            currentMoveMealToSectionId = mealId;
+            const modal = document.getElementById('moveMealSectionModal');
+            const container = document.getElementById('mealSectionPickerList');
+            const currentSectionId = meals[mealId]?.sectionId || null;
+
+            container.innerHTML = '';
+
+            // "No section" option
+            if (currentSectionId) {
+                const btn = document.createElement('button');
+                btn.className = 'modal-category-btn';
+                btn.innerHTML = '📋 Aucune section';
+                btn.onclick = () => moveMealToSection(null);
+                container.appendChild(btn);
+            }
+
+            // Each section (excluding current)
+            mealSectionOrder.forEach(sectionId => {
+                if (sectionId !== currentSectionId && mealSections[sectionId]) {
+                    const btn = document.createElement('button');
+                    btn.className = 'modal-category-btn';
+                    btn.innerHTML = `${escapeHtml(mealSections[sectionId].icon || '📁')} ${escapeHtml(mealSections[sectionId].name)}`;
+                    btn.onclick = () => moveMealToSection(sectionId);
+                    container.appendChild(btn);
+                }
+            });
+
+            if (container.children.length === 0) {
+                container.innerHTML = '<div style="padding: 15px; color: #999; text-align: center;">Aucune autre section disponible</div>';
+            }
+
+            modal.classList.add('show');
+        }
+
+        function closeMoveMealSectionModal() {
+            document.getElementById('moveMealSectionModal').classList.remove('show');
+            currentMoveMealToSectionId = null;
+        }
+
+        function moveMealToSection(sectionId) {
+            if (currentMoveMealToSectionId === null) return;
+            const meal = meals[currentMoveMealToSectionId];
+            if (meal) {
+                if (sectionId) {
+                    meal.sectionId = sectionId;
+                } else {
+                    delete meal.sectionId;
+                }
+                saveToLocalStorage();
+                renderMeals();
+            }
+            closeMoveMealSectionModal();
         }
 
         function toggleArticlesSection() {
@@ -2649,6 +3184,18 @@
 
             selector.innerHTML = html;
             document.getElementById('mealNameInput').value = '';
+
+            // Populate section selector
+            const sectionSelect = document.getElementById('mealSectionSelect');
+            let sectionHtml = '<option value="">Aucune section</option>';
+            mealSectionOrder.forEach(sId => {
+                if (mealSections[sId]) {
+                    sectionHtml += `<option value="${sId}">${escapeHtml(mealSections[sId].name)}</option>`;
+                }
+            });
+            sectionSelect.innerHTML = sectionHtml;
+            sectionSelect.value = '';
+
             modal.classList.add('show');
         }
 
@@ -2691,11 +3238,15 @@
 
             // Create meal
             const mealId = Date.now();
+            const sectionId = document.getElementById('mealSectionSelect').value;
             meals[mealId] = {
                 name,
                 ingredients,
                 selected: false
             };
+            if (sectionId) {
+                meals[mealId].sectionId = sectionId;
+            }
 
             saveToLocalStorage();
             renderMeals();
@@ -2888,6 +3439,18 @@
                 });
 
                 selector.innerHTML = html;
+
+                // Populate section selector with current selection
+                const sectionSelect = document.getElementById('mealSectionSelect');
+                let sectionHtml = '<option value="">Aucune section</option>';
+                mealSectionOrder.forEach(sId => {
+                    if (mealSections[sId]) {
+                        sectionHtml += `<option value="${sId}">${escapeHtml(mealSections[sId].name)}</option>`;
+                    }
+                });
+                sectionSelect.innerHTML = sectionHtml;
+                sectionSelect.value = meal.sectionId || '';
+
                 modal.classList.add('show');
             }
         }
@@ -2915,6 +3478,13 @@
             const meal = meals[currentEditMeal];
             if (meal) {
                 meal.ingredients = ingredients;
+                // Update section
+                const sectionId = document.getElementById('mealSectionSelect').value;
+                if (sectionId) {
+                    meal.sectionId = sectionId;
+                } else {
+                    delete meal.sectionId;
+                }
                 saveToLocalStorage();
                 renderMeals();
             }
@@ -3190,12 +3760,13 @@
             return false;
         }
 
-        // Drag and drop for meals
+        // Drag and drop for meals (with section support)
         let draggedMeal = null;
+        let draggedSection = null;
 
         function initializeMealsDragAndDrop() {
+            // Meal items drag & drop
             const mealItems = document.querySelectorAll('.meal-item[draggable="true"]');
-            
             mealItems.forEach(item => {
                 item.addEventListener('dragstart', handleMealDragStart);
                 item.addEventListener('dragend', handleMealDragEnd);
@@ -3203,73 +3774,190 @@
                 item.addEventListener('drop', handleMealDrop);
                 item.addEventListener('dragleave', handleMealDragLeave);
             });
+
+            // Section containers as drop targets
+            const sectionContainers = document.querySelectorAll('.meal-section-items');
+            sectionContainers.forEach(container => {
+                container.addEventListener('dragover', function(e) {
+                    if (!draggedMeal || draggedSection) return;
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    const section = this.closest('.meal-section');
+                    if (section) section.classList.add('drag-over-section');
+                });
+                container.addEventListener('drop', function(e) {
+                    if (!draggedMeal || draggedSection) return;
+                    e.stopPropagation();
+                    const targetSectionId = this.dataset.sectionId;
+                    const draggedMealId = draggedMeal.dataset.mealId;
+                    if (targetSectionId) {
+                        meals[draggedMealId].sectionId = targetSectionId;
+                    } else {
+                        delete meals[draggedMealId].sectionId;
+                    }
+                    saveToLocalStorage();
+                    renderMeals();
+                });
+                container.addEventListener('dragleave', function(e) {
+                    const section = this.closest('.meal-section');
+                    if (section) section.classList.remove('drag-over-section');
+                });
+            });
+
+            // Section drag & drop (reorder sections)
+            const sectionElements = document.querySelectorAll('.meal-section[draggable="true"]');
+            sectionElements.forEach(section => {
+                section.addEventListener('dragstart', handleSectionDragStart);
+                section.addEventListener('dragend', handleSectionDragEnd);
+                section.addEventListener('dragover', handleSectionDragOver);
+                section.addEventListener('drop', handleSectionDrop);
+                section.addEventListener('dragleave', handleSectionDragLeave);
+            });
         }
 
         function handleMealDragStart(e) {
-            draggedMeal = e.target;
-            e.target.classList.add('dragging');
+            const mealItem = e.target.closest('.meal-item');
+            if (!mealItem) return;
+            draggedMeal = mealItem;
+            draggedSection = null;
+            mealItem.classList.add('dragging');
             e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/html', e.target.innerHTML);
+            e.dataTransfer.setData('text/plain', 'meal');
+            e.stopPropagation();
         }
 
         function handleMealDragEnd(e) {
-            e.target.classList.remove('dragging');
+            if (draggedMeal) {
+                draggedMeal.classList.remove('dragging');
+                draggedMeal = null;
+            }
             document.querySelectorAll('.meal-item').forEach(item => {
                 item.classList.remove('drag-over');
+            });
+            document.querySelectorAll('.meal-section').forEach(s => {
+                s.classList.remove('drag-over-section');
             });
         }
 
         function handleMealDragOver(e) {
-            if (e.preventDefault) {
-                e.preventDefault();
-            }
+            if (!draggedMeal || draggedSection) return;
+            e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
-            
-            if (e.target.classList.contains('meal-item') || e.target.closest('.meal-item')) {
-                const mealItem = e.target.classList.contains('meal-item') ? e.target : e.target.closest('.meal-item');
+
+            const mealItem = e.target.closest('.meal-item');
+            if (mealItem && mealItem !== draggedMeal) {
                 mealItem.classList.add('drag-over');
             }
-            
             return false;
         }
 
         function handleMealDragLeave(e) {
-            const mealItem = e.target.classList.contains('meal-item') ? e.target : e.target.closest('.meal-item');
+            const mealItem = e.target.closest('.meal-item');
             if (mealItem) {
                 mealItem.classList.remove('drag-over');
             }
         }
 
         function handleMealDrop(e) {
-            if (e.stopPropagation) {
-                e.stopPropagation();
-            }
+            if (!draggedMeal || draggedSection) return;
+            e.stopPropagation();
 
             const target = e.target.closest('.meal-item');
             if (draggedMeal && target && draggedMeal !== target) {
                 const draggedMealId = draggedMeal.dataset.mealId;
                 const targetMealId = target.dataset.mealId;
+                const targetSectionId = target.dataset.sectionId || null;
 
-                // Get all meal IDs in current order
+                // Move meal to target's section
+                if (targetSectionId) {
+                    meals[draggedMealId].sectionId = targetSectionId;
+                } else {
+                    delete meals[draggedMealId].sectionId;
+                }
+
+                // Reorder within the target section context
                 const mealIds = Object.keys(meals);
                 const draggedIndex = mealIds.indexOf(draggedMealId);
                 const targetIndex = mealIds.indexOf(targetMealId);
 
-                // Reorder meals
-                const newMeals = {};
-                const reorderedIds = [...mealIds];
-                const [removed] = reorderedIds.splice(draggedIndex, 1);
-                reorderedIds.splice(targetIndex, 0, removed);
+                if (draggedIndex > -1 && targetIndex > -1) {
+                    const reorderedIds = [...mealIds];
+                    const [removed] = reorderedIds.splice(draggedIndex, 1);
+                    reorderedIds.splice(targetIndex, 0, removed);
 
-                reorderedIds.forEach(id => {
-                    newMeals[id] = meals[id];
-                });
+                    const newMeals = {};
+                    reorderedIds.forEach(id => {
+                        newMeals[id] = meals[id];
+                    });
+                    meals = newMeals;
+                }
 
-                meals = newMeals;
                 saveToLocalStorage();
                 renderMeals();
             }
+            return false;
+        }
 
+        // Section reorder drag & drop
+        function handleSectionDragStart(e) {
+            if (draggedMeal) return; // A meal is being dragged, not a section
+            const handle = e.target.closest('.drag-handle');
+            const section = e.target.closest('.meal-section');
+            if (!handle || !section) {
+                e.preventDefault();
+                return;
+            }
+            draggedSection = section;
+            draggedMeal = null;
+            section.classList.add('dragging-section');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', 'section');
+        }
+
+        function handleSectionDragEnd(e) {
+            if (draggedSection) {
+                draggedSection.classList.remove('dragging-section');
+                draggedSection = null;
+            }
+            document.querySelectorAll('.meal-section').forEach(s => {
+                s.classList.remove('drag-over-section');
+            });
+        }
+
+        function handleSectionDragOver(e) {
+            if (!draggedSection) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            const section = e.target.closest('.meal-section');
+            if (section && section !== draggedSection) {
+                section.classList.add('drag-over-section');
+            }
+        }
+
+        function handleSectionDragLeave(e) {
+            if (!draggedSection) return;
+            const section = e.target.closest('.meal-section');
+            if (section) section.classList.remove('drag-over-section');
+        }
+
+        function handleSectionDrop(e) {
+            if (!draggedSection) return;
+            e.stopPropagation();
+            const targetSection = e.target.closest('.meal-section');
+            if (targetSection && draggedSection !== targetSection) {
+                const draggedId = draggedSection.dataset.sectionId;
+                const targetId = targetSection.dataset.sectionId;
+
+                const draggedIndex = mealSectionOrder.indexOf(draggedId);
+                const targetIndex = mealSectionOrder.indexOf(targetId);
+
+                if (draggedIndex > -1 && targetIndex > -1) {
+                    mealSectionOrder.splice(draggedIndex, 1);
+                    mealSectionOrder.splice(targetIndex, 0, draggedId);
+                    saveToLocalStorage();
+                    renderMeals();
+                }
+            }
             return false;
         }
 
@@ -3314,6 +4002,8 @@
                 const dataToMigrate = {
                     groceryList: JSON.parse(savedList),
                     meals: savedMeals ? JSON.parse(savedMeals) : {},
+                    mealSections: {},
+                    mealSectionOrder: [],
                     collapsedCategories: {},
                     lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                 };
@@ -3400,7 +4090,9 @@
             const mealModal = document.getElementById('mealModal');
             const settingsModal = document.getElementById('settingsModal');
             const addArticleModal = document.getElementById('addArticleModal');
-            
+            const mealSectionModal = document.getElementById('mealSectionModal');
+            const moveMealSectionModal = document.getElementById('moveMealSectionModal');
+
             if (event.target === moveModal) {
                 closeMoveModal();
             }
@@ -3419,6 +4111,12 @@
             if (event.target === addArticleModal) {
                 closeAddArticleModal();
             }
+            if (event.target === mealSectionModal) {
+                closeMealSectionModal();
+            }
+            if (event.target === moveMealSectionModal) {
+                closeMoveMealSectionModal();
+            }
             
             // Close dropdowns when clicking outside
             if (!event.target.closest('.item-actions')) {
@@ -3433,6 +4131,16 @@
                 renameInput.addEventListener('keypress', function(e) {
                     if (e.key === 'Enter') {
                         confirmRename();
+                    }
+                });
+            }
+
+            // Meal section modal Enter key handler
+            const mealSectionNameInput = document.getElementById('mealSectionNameInput');
+            if (mealSectionNameInput) {
+                mealSectionNameInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        confirmMealSection();
                     }
                 });
             }
@@ -3486,6 +4194,8 @@
                     const dataToSave = {
                         groceryList: groceryList,
                         meals: meals,
+                        mealSections: mealSections,
+                        mealSectionOrder: mealSectionOrder,
                         collapsedCategories: collapsedCategories,
                         lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                     };

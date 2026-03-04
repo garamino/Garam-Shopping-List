@@ -254,6 +254,9 @@
             <button onclick="runTest('deleteArticle')" class="secondary">Test Suppression</button>
             <button onclick="runTest('createMeal')" class="secondary">Test Création Plat</button>
             <button onclick="runTest('checkMeal')" class="secondary">Test Cocher Plat</button>
+            <button onclick="runTest('createMealSection')" class="secondary">Test Création Section</button>
+            <button onclick="runTest('assignMealToSection')" class="secondary">Test Assigner Section</button>
+            <button onclick="runTest('deleteMealSection')" class="secondary">Test Suppression Section</button>
             <button onclick="clearResults()" class="secondary">🗑️ Effacer</button>
         </div>
 
@@ -297,6 +300,9 @@
             ]
         };
         let meals = {};
+        let mealSections = {};
+        let mealSectionOrder = [];
+        let collapsedMealSections = {};
         let collapsedCategories = {};
         
         // Compteur d'appels Firebase
@@ -343,7 +349,9 @@
         function saveToLocalStorage() {
             // Simuler la sauvegarde locale (immédiate)
             localStorage.setItem('test_groceryList', JSON.stringify(groceryList));
-            
+            localStorage.setItem('test_mealSections', JSON.stringify(mealSections));
+            localStorage.setItem('test_mealSectionOrder', JSON.stringify(mealSectionOrder));
+
             // Debouncing pour Firebase
             clearTimeout(saveTimeout);
             saveTimeout = setTimeout(() => {
@@ -360,6 +368,8 @@
                 await db.collection('users').doc(TEST_USER_ID).set({
                     groceryList: groceryList,
                     meals: meals,
+                    mealSections: mealSections,
+                    mealSectionOrder: mealSectionOrder,
                     collapsedCategories: collapsedCategories,
                     lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                 }, { merge: true });
@@ -779,6 +789,289 @@
             return test;
         }
         
+        async function testCreateMealSection() {
+            const test = {
+                id: 'createMealSection',
+                name: "Test Création Section de Plats",
+                steps: [],
+                status: "running",
+                startTime: Date.now()
+            };
+
+            updateTestUI(test);
+
+            try {
+                // Réinitialiser
+                mealSections = {};
+                mealSectionOrder = [];
+
+                test.steps.push("1️⃣ Création de la section 'Plats italiens'...");
+                updateTestUI(test);
+
+                const sectionId = String(Date.now());
+                mealSections[sectionId] = { name: 'Plats italiens' };
+                mealSectionOrder.push(sectionId);
+
+                saveToLocalStorage();
+
+                test.steps.push("2️⃣ Vérification locale immédiate...");
+                updateTestUI(test);
+
+                const localSections = JSON.parse(localStorage.getItem('test_mealSections'));
+                const localOrder = JSON.parse(localStorage.getItem('test_mealSectionOrder'));
+
+                const localOk = localSections[sectionId] &&
+                                localSections[sectionId].name === 'Plats italiens' &&
+                                localOrder.includes(sectionId);
+
+                if (!localOk) {
+                    test.status = "failed";
+                    test.steps.push("❌ ÉCHOUÉ: Section absente du localStorage");
+                    test.duration = ((Date.now() - test.startTime) / 1000).toFixed(1);
+                    updateTestUI(test);
+                    return test;
+                }
+
+                test.steps.push("   └─ ✅ Section trouvée dans localStorage");
+
+                test.steps.push("3️⃣ Attente de la sauvegarde Firebase (6 secondes)...");
+                updateTestUI(test);
+                await sleep(6000);
+
+                test.steps.push("4️⃣ Vérification dans Firebase...");
+                updateTestUI(test);
+
+                const snapshot = await db.collection('users').doc(TEST_USER_ID).get();
+
+                if (snapshot.exists) {
+                    const data = snapshot.data();
+                    const fbSection = data.mealSections && data.mealSections[sectionId];
+                    const fbOrder = data.mealSectionOrder && data.mealSectionOrder.includes(sectionId);
+
+                    if (fbSection && fbSection.name === 'Plats italiens' && fbOrder) {
+                        test.status = "passed";
+                        test.steps.push(`✅ RÉUSSI: Section "Plats italiens" trouvée dans Firebase`);
+                        test.steps.push(`   └─ mealSectionOrder contient l'ID: ${fbOrder}`);
+                    } else {
+                        test.status = "failed";
+                        test.steps.push(`❌ ÉCHOUÉ: Section absente de Firebase`);
+                        test.steps.push(`   └─ mealSections: ${JSON.stringify(data.mealSections)}`);
+                        test.steps.push(`   └─ mealSectionOrder: ${JSON.stringify(data.mealSectionOrder)}`);
+                    }
+                } else {
+                    test.status = "failed";
+                    test.steps.push("❌ ÉCHOUÉ: Aucune donnée dans Firebase");
+                }
+
+            } catch (error) {
+                test.status = "failed";
+                test.steps.push(`❌ Erreur: ${error.message}`);
+                test.error = error.stack;
+            }
+
+            test.duration = ((Date.now() - test.startTime) / 1000).toFixed(1);
+            updateTestUI(test);
+            return test;
+        }
+
+        async function testAssignMealToSection() {
+            const test = {
+                id: 'assignMealToSection',
+                name: "Test Assigner Plat à une Section",
+                steps: [],
+                status: "running",
+                startTime: Date.now()
+            };
+
+            updateTestUI(test);
+
+            try {
+                test.steps.push("1️⃣ Création d'une section et d'un plat...");
+                updateTestUI(test);
+
+                // Créer section
+                const sectionId = String(Date.now());
+                mealSections[sectionId] = { name: 'Desserts' };
+                mealSectionOrder.push(sectionId);
+
+                // Créer plat SANS section
+                const mealId = String(Date.now() + 1);
+                meals[mealId] = {
+                    name: 'Tiramisu Test',
+                    selected: false,
+                    ingredients: [{ category: 'fruits', itemId: 1 }]
+                };
+
+                saveToLocalStorage();
+
+                test.steps.push("2️⃣ Vérification: plat sans section...");
+                updateTestUI(test);
+
+                if (meals[mealId].sectionId) {
+                    test.status = "failed";
+                    test.steps.push("❌ ÉCHOUÉ: Le plat a déjà une section");
+                    test.duration = ((Date.now() - test.startTime) / 1000).toFixed(1);
+                    updateTestUI(test);
+                    return test;
+                }
+                test.steps.push("   └─ ✅ Plat sans section (correct)");
+
+                test.steps.push(`3️⃣ Assignation du plat à la section "Desserts"...`);
+                updateTestUI(test);
+
+                meals[mealId].sectionId = sectionId;
+                saveToLocalStorage();
+
+                test.steps.push("4️⃣ Attente de la sauvegarde Firebase (6 secondes)...");
+                updateTestUI(test);
+                await sleep(6000);
+
+                test.steps.push("5️⃣ Vérification dans Firebase...");
+                updateTestUI(test);
+
+                const snapshot = await db.collection('users').doc(TEST_USER_ID).get();
+
+                if (snapshot.exists) {
+                    const data = snapshot.data();
+                    const fbMeal = data.meals && data.meals[mealId];
+
+                    if (fbMeal && fbMeal.sectionId === sectionId) {
+                        test.status = "passed";
+                        test.steps.push(`✅ RÉUSSI: Plat "${fbMeal.name}" lié à la section "Desserts"`);
+                        test.steps.push(`   └─ sectionId: ${fbMeal.sectionId}`);
+                    } else {
+                        test.status = "failed";
+                        test.steps.push(`❌ ÉCHOUÉ: sectionId incorrect`);
+                        test.steps.push(`   └─ Attendu: ${sectionId}, Obtenu: ${fbMeal ? fbMeal.sectionId : 'plat introuvable'}`);
+                    }
+                } else {
+                    test.status = "failed";
+                    test.steps.push("❌ ÉCHOUÉ: Aucune donnée dans Firebase");
+                }
+
+            } catch (error) {
+                test.status = "failed";
+                test.steps.push(`❌ Erreur: ${error.message}`);
+                test.error = error.stack;
+            }
+
+            test.duration = ((Date.now() - test.startTime) / 1000).toFixed(1);
+            updateTestUI(test);
+            return test;
+        }
+
+        async function testDeleteMealSection() {
+            const test = {
+                id: 'deleteMealSection',
+                name: "Test Suppression Section → Plats Désassignés",
+                steps: [],
+                status: "running",
+                startTime: Date.now()
+            };
+
+            updateTestUI(test);
+
+            try {
+                test.steps.push("1️⃣ Création d'une section avec 2 plats...");
+                updateTestUI(test);
+
+                // Reset
+                mealSections = {};
+                mealSectionOrder = [];
+
+                const sectionId = String(Date.now());
+                mealSections[sectionId] = { name: 'Section à supprimer' };
+                mealSectionOrder.push(sectionId);
+
+                const mealIdA = String(Date.now() + 1);
+                const mealIdB = String(Date.now() + 2);
+
+                meals[mealIdA] = {
+                    name: 'Plat A',
+                    selected: false,
+                    ingredients: [{ category: 'fruits', itemId: 1 }],
+                    sectionId: sectionId
+                };
+                meals[mealIdB] = {
+                    name: 'Plat B',
+                    selected: false,
+                    ingredients: [{ category: 'fruits', itemId: 2 }],
+                    sectionId: sectionId
+                };
+
+                test.steps.push(`   └─ Section "${mealSections[sectionId].name}" avec Plat A et Plat B`);
+                updateTestUI(test);
+
+                test.steps.push("2️⃣ Suppression de la section...");
+                updateTestUI(test);
+
+                // Simuler deleteMealSection
+                const mealsInSection = Object.keys(meals).filter(id => meals[id].sectionId === sectionId);
+                mealsInSection.forEach(id => {
+                    delete meals[id].sectionId;
+                });
+                delete mealSections[sectionId];
+                mealSectionOrder = mealSectionOrder.filter(id => id !== sectionId);
+
+                saveToLocalStorage();
+
+                test.steps.push("3️⃣ Vérification locale...");
+                updateTestUI(test);
+
+                const sectionDeleted = !mealSections[sectionId];
+                const orderClean = !mealSectionOrder.includes(sectionId);
+                const mealAFree = !meals[mealIdA].sectionId;
+                const mealBFree = !meals[mealIdB].sectionId;
+
+                test.steps.push(`   └─ Section supprimée: ${sectionDeleted ? '✅' : '❌'}`);
+                test.steps.push(`   └─ Ordre nettoyé: ${orderClean ? '✅' : '❌'}`);
+                test.steps.push(`   └─ Plat A sans section: ${mealAFree ? '✅' : '❌'}`);
+                test.steps.push(`   └─ Plat B sans section: ${mealBFree ? '✅' : '❌'}`);
+                updateTestUI(test);
+
+                test.steps.push("4️⃣ Attente de la sauvegarde Firebase (6 secondes)...");
+                updateTestUI(test);
+                await sleep(6000);
+
+                test.steps.push("5️⃣ Vérification dans Firebase...");
+                updateTestUI(test);
+
+                const snapshot = await db.collection('users').doc(TEST_USER_ID).get();
+
+                if (snapshot.exists) {
+                    const data = snapshot.data();
+                    const fbSectionGone = !data.mealSections || !data.mealSections[sectionId];
+                    const fbMealA = data.meals && data.meals[mealIdA];
+                    const fbMealB = data.meals && data.meals[mealIdB];
+                    const fbMealAFree = fbMealA && !fbMealA.sectionId;
+                    const fbMealBFree = fbMealB && !fbMealB.sectionId;
+
+                    if (fbSectionGone && fbMealAFree && fbMealBFree) {
+                        test.status = "passed";
+                        test.steps.push("✅ RÉUSSI: Section supprimée et plats désassignés dans Firebase");
+                    } else {
+                        test.status = "failed";
+                        test.steps.push("❌ ÉCHOUÉ: Données Firebase incorrectes");
+                        test.steps.push(`   └─ Section supprimée: ${fbSectionGone ? '✅' : '❌'}`);
+                        test.steps.push(`   └─ Plat A libre: ${fbMealAFree ? '✅' : '❌'}`);
+                        test.steps.push(`   └─ Plat B libre: ${fbMealBFree ? '✅' : '❌'}`);
+                    }
+                } else {
+                    test.status = "failed";
+                    test.steps.push("❌ ÉCHOUÉ: Aucune donnée dans Firebase");
+                }
+
+            } catch (error) {
+                test.status = "failed";
+                test.steps.push(`❌ Erreur: ${error.message}`);
+                test.error = error.stack;
+            }
+
+            test.duration = ((Date.now() - test.startTime) / 1000).toFixed(1);
+            updateTestUI(test);
+            return test;
+        }
+
         // ========================================
         // RUNNER
         // ========================================
@@ -795,7 +1088,10 @@
             allTests.push(await testDeleteArticle());
             allTests.push(await testCreateMeal());
             allTests.push(await testCheckMeal());
-            
+            allTests.push(await testCreateMealSection());
+            allTests.push(await testAssignMealToSection());
+            allTests.push(await testDeleteMealSection());
+
             showSummary(allTests);
         }
         
@@ -822,6 +1118,15 @@
                     break;
                 case 'checkMeal':
                     result = await testCheckMeal();
+                    break;
+                case 'createMealSection':
+                    result = await testCreateMealSection();
+                    break;
+                case 'assignMealToSection':
+                    result = await testAssignMealToSection();
+                    break;
+                case 'deleteMealSection':
+                    result = await testDeleteMealSection();
                     break;
             }
             
