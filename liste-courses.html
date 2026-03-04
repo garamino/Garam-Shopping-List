@@ -527,6 +527,17 @@
             background: #5a6268;
         }
 
+        .auth-button-google {
+            background: white;
+            color: #333;
+            border: 2px solid #dadce0;
+        }
+
+        .auth-button-google:hover {
+            background: #f8f9fa;
+            border-color: #667eea;
+        }
+
         .auth-divider {
             margin: 20px 0;
             text-align: center;
@@ -1096,11 +1107,14 @@
     <div id="authModal" class="auth-modal">
         <div class="auth-modal-content">
             <div class="auth-modal-header">🔐 Connexion</div>
-            <div class="auth-modal-subtitle">Entrez votre code personnel pour accéder à vos données</div>
-            <input type="text" class="auth-input" id="loginCodeInput" placeholder="Votre code" maxlength="30">
-            <button class="auth-button" onclick="loginWithCode()">Se connecter</button>
+            <input type="email" class="auth-input" id="loginEmailInput" placeholder="Votre email" autocomplete="email">
+            <input type="password" class="auth-input" id="loginPasswordInput" placeholder="Votre mot de passe" autocomplete="current-password">
+            <p id="loginError" style="color:#dc3545;font-size:13px;display:none;margin-top:-8px;text-align:left;"></p>
+            <button class="auth-button" onclick="loginWithEmail()">Se connecter</button>
             <div class="auth-divider">ou</div>
-            <button class="auth-button auth-button-secondary" onclick="showCreateAccount()">Créer un nouveau compte</button>
+            <button class="auth-button auth-button-google" onclick="loginWithGoogle()">🔵 Continuer avec Google</button>
+            <div class="auth-divider">pas encore de compte ?</div>
+            <button class="auth-button auth-button-secondary" onclick="showCreateAccount()">Créer un compte</button>
         </div>
     </div>
 
@@ -1108,10 +1122,13 @@
     <div id="createAccountModal" class="auth-modal">
         <div class="auth-modal-content">
             <div class="auth-modal-header">✨ Nouveau compte</div>
-            <div class="auth-modal-subtitle">Choisissez un code personnel (minimum 4 caractères)</div>
-            <input type="text" class="auth-input" id="newCodeInput" placeholder="Votre code" maxlength="30">
-            <input type="text" class="auth-input" id="confirmCodeInput" placeholder="Confirmez le code" maxlength="30">
-            <button class="auth-button" onclick="createAccount()">Créer mon compte</button>
+            <input type="email" class="auth-input" id="newEmailInput" placeholder="Votre email" autocomplete="email">
+            <input type="password" class="auth-input" id="newPasswordInput" placeholder="Mot de passe (min. 6 car.)" autocomplete="new-password">
+            <input type="password" class="auth-input" id="confirmPasswordInput" placeholder="Confirmer le mot de passe" autocomplete="new-password">
+            <p id="registerError" style="color:#dc3545;font-size:13px;display:none;margin-top:-8px;text-align:left;"></p>
+            <button class="auth-button" onclick="registerWithEmail()">Créer mon compte</button>
+            <div class="auth-divider">ou</div>
+            <button class="auth-button auth-button-google" onclick="loginWithGoogle()">🔵 Continuer avec Google</button>
             <button class="auth-button auth-button-secondary" onclick="backToLogin()">Retour</button>
         </div>
     </div>
@@ -1121,13 +1138,10 @@
         <div class="modal-content">
             <div class="modal-header">⚙️ Paramètres</div>
             <div style="text-align: left; margin: 20px 0;">
-                <p style="margin-bottom: 10px;"><strong>Votre code personnel :</strong></p>
+                <p style="margin-bottom: 10px;"><strong>Compte connecté :</strong></p>
                 <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-                    <code id="displayUserCode" style="font-size: 18px; font-weight: 600; color: #667eea;">---</code>
+                    <code id="displayUserCode" style="font-size: 15px; font-weight: 600; color: #667eea;">---</code>
                 </div>
-                <p style="font-size: 13px; color: #6c757d; margin-bottom: 20px;">
-                    💡 Conservez ce code précieusement ! Il vous permet de récupérer vos données sur n'importe quel appareil.
-                </p>
                 
                 <!-- Test page link (only for Maxou) -->
                 <div id="testPageLink" style="display: none; background: #e3f2fd; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 2px solid #2196f3;">
@@ -1148,8 +1162,18 @@
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 
     <script>
+        // ========================================
+        // SECURITY — Anti-XSS helper
+        // ========================================
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = String(str || '');
+            return div.innerHTML;
+        }
+
         // ========================================
         // FIREBASE CONFIGURATION
         // ========================================
@@ -1164,106 +1188,113 @@
 
         // Initialize Firebase
         let db = null;
+        let auth = null;
+        let currentUser = null;
         let userId = null;
         let isFirebaseReady = false;
 
-        // Generate or retrieve user ID
-        function getUserId() {
-            let uid = localStorage.getItem('userCode');
-            if (!uid) {
-                // No code found, user needs to login or create account
-                return null;
-            }
-            // Hash the code for security (simple hash)
-            return 'user_' + btoa(uid).replace(/[^a-zA-Z0-9]/g, '');
+        // ========================================
+        // AUTHENTICATION — Firebase Auth
+        // ========================================
+
+        function showAuthError(elementId, msg) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            el.textContent = msg;
+            el.style.display = 'block';
         }
 
-        function checkAuthStatus() {
-            const userCode = localStorage.getItem('userCode');
-            if (!userCode) {
-                // Show login modal
-                document.getElementById('authModal').classList.add('show');
-                return false;
-            }
-            return true;
-        }
-
-        function loginWithCode() {
-            const code = document.getElementById('loginCodeInput').value.trim();
-            
-            if (!code) {
-                alert('Veuillez entrer votre code');
-                return;
-            }
-
-            if (code.length < 4) {
-                alert('Le code doit contenir au moins 4 caractères');
-                return;
-            }
-
-            // Save the code
-            localStorage.setItem('userCode', code);
-            userId = getUserId();
-            
-            // Close modal
-            document.getElementById('authModal').classList.remove('show');
-            
-            // Reload data with new userId
-            location.reload();
+        function hideAuthErrors() {
+            ['loginError', 'registerError'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
         }
 
         function showCreateAccount() {
+            hideAuthErrors();
             document.getElementById('authModal').classList.remove('show');
             document.getElementById('createAccountModal').classList.add('show');
         }
 
         function backToLogin() {
+            hideAuthErrors();
             document.getElementById('createAccountModal').classList.remove('show');
             document.getElementById('authModal').classList.add('show');
         }
 
-        function createAccount() {
-            const code = document.getElementById('newCodeInput').value.trim();
-            const confirmCode = document.getElementById('confirmCodeInput').value.trim();
-            
-            if (!code || !confirmCode) {
-                alert('Veuillez remplir tous les champs');
+        async function loginWithEmail() {
+            hideAuthErrors();
+            const email = document.getElementById('loginEmailInput').value.trim();
+            const password = document.getElementById('loginPasswordInput').value;
+            if (!email || !password) {
+                showAuthError('loginError', 'Veuillez remplir tous les champs');
                 return;
             }
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+            } catch (e) {
+                const msgs = {
+                    'auth/user-not-found': 'Aucun compte avec cet email.',
+                    'auth/wrong-password': 'Mot de passe incorrect.',
+                    'auth/invalid-email': 'Email invalide.',
+                    'auth/invalid-credential': 'Email ou mot de passe incorrect.',
+                    'auth/too-many-requests': 'Trop de tentatives. Réessayez plus tard.'
+                };
+                showAuthError('loginError', msgs[e.code] || 'Erreur de connexion.');
+            }
+        }
 
-            if (code.length < 4) {
-                alert('Le code doit contenir au moins 4 caractères');
+        async function registerWithEmail() {
+            hideAuthErrors();
+            const email = document.getElementById('newEmailInput').value.trim();
+            const password = document.getElementById('newPasswordInput').value;
+            const confirm = document.getElementById('confirmPasswordInput').value;
+            if (!email || !password || !confirm) {
+                showAuthError('registerError', 'Veuillez remplir tous les champs');
                 return;
             }
-
-            if (code !== confirmCode) {
-                alert('Les codes ne correspondent pas');
+            if (password.length < 6) {
+                showAuthError('registerError', 'Le mot de passe doit contenir au moins 6 caractères.');
                 return;
             }
+            if (password !== confirm) {
+                showAuthError('registerError', 'Les mots de passe ne correspondent pas.');
+                return;
+            }
+            try {
+                await auth.createUserWithEmailAndPassword(email, password);
+            } catch (e) {
+                const msgs = {
+                    'auth/email-already-in-use': 'Un compte existe déjà avec cet email.',
+                    'auth/invalid-email': 'Email invalide.',
+                    'auth/weak-password': 'Mot de passe trop faible.'
+                };
+                showAuthError('registerError', msgs[e.code] || 'Erreur lors de la création du compte.');
+            }
+        }
 
-            // Save the code
-            localStorage.setItem('userCode', code);
-            userId = getUserId();
-            
-            // Close modal
-            document.getElementById('createAccountModal').classList.remove('show');
-            
-            // Initialize app
-            location.reload();
+        async function loginWithGoogle() {
+            hideAuthErrors();
+            try {
+                await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+            } catch (e) {
+                if (e.code !== 'auth/popup-closed-by-user') {
+                    showAuthError('loginError', 'Erreur Google Sign-In. Réessayez.');
+                }
+            }
+        }
+
+        async function logout() {
+            if (!confirm('Voulez-vous vous déconnecter ?')) return;
+            await auth.signOut();
         }
 
         function openSettingsModal() {
-            const userCode = localStorage.getItem('userCode');
-            document.getElementById('displayUserCode').textContent = userCode || 'Non défini';
-            
-            // Show test page link only for user "Maxou"
+            const email = currentUser ? (currentUser.email || currentUser.displayName || 'Compte Google') : 'Non connecté';
+            document.getElementById('displayUserCode').textContent = email;
             const testPageLink = document.getElementById('testPageLink');
-            if (userCode === 'Maxou') {
-                testPageLink.style.display = 'block';
-            } else {
-                testPageLink.style.display = 'none';
-            }
-            
+            testPageLink.style.display = currentUser ? 'block' : 'none';
             document.getElementById('settingsModal').classList.add('show');
         }
 
@@ -1271,34 +1302,12 @@
             document.getElementById('settingsModal').classList.remove('show');
         }
 
-        function logout() {
-            if (confirm('Êtes-vous sûr de vouloir vous déconnecter ? Assurez-vous de connaître votre code pour vous reconnecter !')) {
-                localStorage.removeItem('userCode');
-                location.reload();
-            }
-        }
-
         // Initialize Firebase when the page loads
         try {
             firebase.initializeApp(firebaseConfig);
             db = firebase.firestore();
-            
-            // Check if user is authenticated
-            if (!checkAuthStatus()) {
-                console.log('⏳ En attente de connexion utilisateur...');
-                // Don't set userId yet, wait for login
-            } else {
-                userId = getUserId();
-                
-                // Check if we're on HTTPS (Firebase requires it)
-                if (window.location.protocol === 'https:') {
-                    isFirebaseReady = true;
-                    console.log('✅ Firebase initialisé (HTTPS détecté)');
-                } else {
-                    isFirebaseReady = false;
-                    console.log('⚠️ Firebase désactivé (HTTPS requis). Utilisation localStorage uniquement.');
-                }
-            }
+            auth = firebase.auth();
+            console.log('✅ Firebase initialisé');
         } catch (error) {
             console.error('❌ Erreur Firebase:', error);
             isFirebaseReady = false;
@@ -2021,7 +2030,7 @@
                     const items = groceryList[ing.category] || [];
                     // Compare as strings to handle both number and string IDs
                     const item = items.find(i => String(i.id) === String(ing.itemId));
-                    return item ? item.name : '';
+                    return item ? escapeHtml(item.name) : '';
                 }).filter(Boolean).slice(0, 3).join(', ');
                 const moreText = ingredientCount > 3 ? ` +${ingredientCount - 3} autres` : '';
 
@@ -2035,7 +2044,7 @@
                                ${meal.selected ? 'checked' : ''}
                                onchange="toggleMeal(${mealId})">
                         <div class="meal-info">
-                            <div class="meal-name">${meal.name}</div>
+                            <div class="meal-name">${escapeHtml(meal.name)}</div>
                             <div class="meal-ingredients">${ingredientNames}${moreText}</div>
                         </div>
                         <div class="item-actions">
@@ -2135,7 +2144,7 @@
                                             <input type="checkbox" 
                                                    id="ing-${categoryKey}-${item.id}"
                                                    value='${value}'>
-                                            <label for="ing-${categoryKey}-${item.id}">${item.name}</label>
+                                            <label for="ing-${categoryKey}-${item.id}">${escapeHtml(item.name)}</label>
                                         </div>
                                     `;
                                 }).join('')}
@@ -2375,7 +2384,7 @@
                                                        id="ing-${categoryKey}-${item.id}"
                                                        value='${value}'
                                                        ${isChecked ? 'checked' : ''}>
-                                                <label for="ing-${categoryKey}-${item.id}">${item.name}</label>
+                                                <label for="ing-${categoryKey}-${item.id}">${escapeHtml(item.name)}</label>
                                             </div>
                                         `;
                                     }).join('')}
@@ -2531,7 +2540,7 @@
                                     <input type="checkbox" class="item-checkbox" 
                                            ${item.checked ? 'checked' : ''}
                                            onchange="toggleItem('${categoryKey}', ${item.id})">
-                                    <span class="item-name">${item.name}</span>
+                                    <span class="item-name">${escapeHtml(item.name)}</span>
                                     ${item.quantity ? `<span class="quantity-badge" onclick="event.stopPropagation(); openQuantityModal('${categoryKey}', ${item.id})" title="Modifier la quantité">${item.quantity}</span>` : ''}
                                     <div class="item-actions">
                                         <button class="item-menu-btn" onclick="toggleItemMenu(event, '${categoryKey}', ${item.id})" title="Actions">
@@ -2796,18 +2805,57 @@
             });
         });
 
-        // Initialize
-        (async function() {
-            // Only initialize if user is authenticated
-            if (userId) {
+        // ========================================
+        // MIGRATION — Données localStorage → nouveau UID Firebase
+        // ========================================
+        async function migrateLocalDataIfNeeded() {
+            if (!isFirebaseReady || !db || !userId) return;
+            try {
+                const doc = await db.collection('users').doc(userId).get();
+                if (doc.exists) return; // Déjà des données dans Firebase, rien à migrer
+
+                const savedList = localStorage.getItem('groceryList');
+                const savedMeals = localStorage.getItem('meals');
+                if (!savedList) return; // Rien à migrer
+
+                const dataToMigrate = {
+                    groceryList: JSON.parse(savedList),
+                    meals: savedMeals ? JSON.parse(savedMeals) : {},
+                    collapsedCategories: {},
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                await db.collection('users').doc(userId).set(dataToMigrate);
+                console.log('✅ Données locales migrées vers Firebase Auth');
+            } catch (e) {
+                console.error('Erreur migration:', e);
+            }
+        }
+
+        // ========================================
+        // AUTH STATE LISTENER — Point d'entrée principal
+        // ========================================
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                currentUser = user;
+                userId = user.uid;
+                isFirebaseReady = (window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+                document.getElementById('authModal').classList.remove('show');
+                document.getElementById('createAccountModal').classList.remove('show');
+
+                await migrateLocalDataIfNeeded();
+
                 await initializeDefaultItems();
                 renderCategories();
                 renderMeals();
                 updateArticlesCollapseState();
             } else {
-                console.log('⏳ En attente de connexion...');
+                currentUser = null;
+                userId = null;
+                isFirebaseReady = false;
+                document.getElementById('authModal').classList.add('show');
             }
-        })();
+        });
 
         // Close modal when clicking outside
         window.onclick = function(event) {
@@ -2855,21 +2903,22 @@
             }
 
             // Auth modals Enter key handlers
-            const loginCodeInput = document.getElementById('loginCodeInput');
-            if (loginCodeInput) {
-                loginCodeInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        loginWithCode();
-                    }
+            const loginPasswordInput = document.getElementById('loginPasswordInput');
+            if (loginPasswordInput) {
+                loginPasswordInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') { loginWithEmail(); }
                 });
             }
-
-            const confirmCodeInput = document.getElementById('confirmCodeInput');
-            if (confirmCodeInput) {
-                confirmCodeInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        createAccount();
-                    }
+            const loginEmailInput = document.getElementById('loginEmailInput');
+            if (loginEmailInput) {
+                loginEmailInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') { loginWithEmail(); }
+                });
+            }
+            const confirmPasswordInput = document.getElementById('confirmPasswordInput');
+            if (confirmPasswordInput) {
+                confirmPasswordInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') { registerWithEmail(); }
                 });
             }
 
