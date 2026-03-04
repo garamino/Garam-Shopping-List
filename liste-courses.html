@@ -1182,7 +1182,22 @@
 
                 <!-- Section liste partagée active -->
                 <div id="sharedListSection" style="display:none; background:#f0f7ff; padding:15px; border-radius:10px; margin-bottom:12px; border:2px solid #667eea;">
-                    <p style="font-weight:600; color:#667eea; margin-bottom:8px;">👥 <span id="activeListName">Liste partagée</span></p>
+                    <!-- Nom de la liste + bouton renommer -->
+                    <div id="activeListNameRow" style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                        <p style="font-weight:600; color:#667eea; margin:0; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">👥 <span id="activeListName">Liste partagée</span></p>
+                        <button onclick="startRenameList()" style="font-size:12px; padding:3px 9px; border:1px solid #667eea; background:white; color:#667eea; border-radius:5px; cursor:pointer; flex-shrink:0;">✏️</button>
+                    </div>
+                    <!-- Formulaire inline renommage (masqué par défaut) -->
+                    <div id="renameListForm" style="display:none; margin-bottom:8px;">
+                        <div style="display:flex; gap:6px; align-items:center;">
+                            <input type="text" id="renameListInput"
+                                   placeholder="Nouveau nom de la liste"
+                                   onkeydown="if(event.key==='Enter') saveRenameList(); if(event.key==='Escape') cancelRenameList();"
+                                   style="flex:1; padding:7px 10px; border:2px solid #667eea; border-radius:6px; font-size:14px; outline:none;">
+                            <button onclick="saveRenameList()" title="Valider" style="padding:6px 11px; background:#667eea; color:white; border:none; border-radius:6px; cursor:pointer; font-size:15px; font-weight:bold;">✓</button>
+                            <button onclick="cancelRenameList()" title="Annuler" style="padding:6px 11px; background:#6c757d; color:white; border:none; border-radius:6px; cursor:pointer; font-size:15px;">✕</button>
+                        </div>
+                    </div>
                     <div id="presenceContainer" style="font-size:13px; margin-bottom:10px;"></div>
                     <div id="shareCodeSection" style="display:none; margin-bottom:10px;">
                         <p style="font-size:12px; color:#666; margin-bottom:4px;">Code d'invitation :</p>
@@ -1396,6 +1411,7 @@
             if (activeListId) {
                 sharedSection.style.display = 'block';
                 personalSection.style.display = 'none';
+                cancelRenameList(); // Réinitialiser le formulaire si ouvert
                 // Afficher le nom de la liste active
                 db.collection('lists').doc(activeListId).get().then(doc => {
                     if (doc.exists) {
@@ -1407,6 +1423,37 @@
                 personalSection.style.display = 'block';
                 document.getElementById('shareCodeSection').style.display = 'none';
             }
+        }
+
+        function startRenameList() {
+            const currentName = document.getElementById('activeListName').textContent;
+            document.getElementById('renameListInput').value = currentName;
+            document.getElementById('activeListNameRow').style.display = 'none';
+            document.getElementById('renameListForm').style.display = 'block';
+            const input = document.getElementById('renameListInput');
+            input.focus();
+            input.select();
+        }
+
+        async function saveRenameList() {
+            const newName = document.getElementById('renameListInput').value.trim();
+            if (!newName) { alert('Le nom ne peut pas être vide.'); return; }
+            if (!activeListId) return;
+            try {
+                await db.collection('lists').doc(activeListId).update({ name: newName });
+                document.getElementById('activeListName').textContent = newName;
+                cancelRenameList();
+            } catch (e) {
+                console.error('Erreur renameList:', e);
+                alert('Erreur lors de la modification du nom : ' + (e.message || e));
+            }
+        }
+
+        function cancelRenameList() {
+            const form = document.getElementById('renameListForm');
+            const row = document.getElementById('activeListNameRow');
+            if (form) form.style.display = 'none';
+            if (row) row.style.display = 'flex';
         }
 
         async function createSharedList() {
@@ -1501,7 +1548,11 @@
                 closeSettingsModal();
             } catch (e) {
                 console.error('Erreur joinSharedList:', e);
-                alert('Erreur lors de la connexion à la liste. Réessayez.');
+                if (e.code === 'permission-denied') {
+                    alert('❌ Permissions insuffisantes.\n\nAssurez-vous que les règles Firestore ont été mises à jour dans la console Firebase (voir CLAUDE.md).');
+                } else {
+                    alert('Erreur lors de la connexion à la liste : ' + (e.message || e));
+                }
             }
         }
 

@@ -1,6 +1,6 @@
 # 🛒 Ma Liste de Courses - Documentation Projet
 
-> Application PWA (Progressive Web App) de gestion de liste de courses avec synchronisation cloud, système de plats/recettes, et tests automatisés.
+> Application PWA (Progressive Web App) de gestion de liste de courses avec synchronisation cloud, système de plats/recettes, partage en temps réel et authentification Firebase.
 
 ---
 
@@ -25,7 +25,10 @@
 ### Qu'est-ce que c'est ?
 
 Une application web progressive (PWA) permettant de gérer efficacement sa liste de courses avec :
-- ✅ Synchronisation cloud automatique (Firebase)
+- ✅ Synchronisation cloud automatique (Firebase Firestore)
+- ✅ Authentification sécurisée (Firebase Auth — email/mdp + Google)
+- ✅ Partage de liste en temps réel entre plusieurs utilisateurs
+- ✅ Indicateur de présence (qui est en ligne)
 - ✅ Mode hors-ligne complet (localStorage)
 - ✅ Système de plats/recettes avec ingrédients auto-cochés
 - ✅ Drag & drop pour réorganiser
@@ -35,7 +38,7 @@ Une application web progressive (PWA) permettant de gérer efficacement sa liste
 ### Cas d'usage
 
 - **Personnel** : Gérer sa liste de courses hebdomadaire
-- **Couple/Famille** : Chaque personne a sa propre liste synchronisée
+- **Couple/Famille** : Liste partagée, modifications visibles en temps réel
 - **Planification repas** : Créer des plats avec ingrédients, cocher le plat = tous les ingrédients cochés
 - **Mobile-first** : Optimisé pour smartphone au supermarché
 
@@ -72,7 +75,7 @@ Une application web progressive (PWA) permettant de gérer efficacement sa liste
 
 #### Recherche et filtres
 - 🔍 **Recherche** : Trouve instantanément un article
-- **Filtres** : 
+- **Filtres** :
   - Tout (tous les articles)
   - À acheter (cochés uniquement)
   - Non sélectionnés (non cochés)
@@ -125,6 +128,7 @@ Voulez-vous vraiment le supprimer ?
 - ✅ Debouncing de 5 secondes (économise les appels)
 - ✅ Synchronisation entre appareils
 - ✅ Sauvegarde forcée avant fermeture (beforeunload)
+- ✅ Temps réel via `onSnapshot` pour les listes partagées
 
 #### Indicateurs de synchronisation
 ```
@@ -137,28 +141,68 @@ Voulez-vous vraiment le supprimer ?
 
 ---
 
-### 4. Authentification Simple
+### 4. Authentification Firebase
 
-**Système de code personnel :**
-- Chaque utilisateur choisit un code (ex: "Maxou", "Marie")
-- Code stocké en localStorage + Firebase
-- userId = base64(code) pour Firebase
+**Système Firebase Authentication (email/mot de passe + Google Sign-In) :**
+- Création de compte avec email et mot de passe (min. 6 caractères)
+- Connexion avec un compte Google existant
+- userId = UID Firebase unique généré par Firebase Auth
+- Session persistante entre les appareils
 
 **Fonctionnalités :**
 ```
 ⚙️ Paramètres
-├─ Affichage du code personnel
-├─ 🧪 Lien vers page de tests (uniquement pour "Maxou")
+├─ Compte connecté (email affiché)
+├─ 🔗 Créer une liste partagée
+├─ Rejoindre une liste (saisir un code)
+├─ [Si liste partagée active]
+│   ├─ 👥 Nom de la liste + indicateurs de présence
+│   ├─ Voir le code d'invitation
+│   ├─ ⭐ Définir comme liste par défaut
+│   ├─ 🔄 Changer de liste
+│   └─ Quitter la liste
+├─ 🧪 Page de tests (utilisateurs connectés)
 └─ 🚪 Déconnexion
 ```
 
-**Note de sécurité :**
-⚠️ Ce système est simple mais pas sécurisé pour production.
-Pour usage public → Migrer vers Firebase Authentication (email/password ou Google Sign-In).
+**Migration automatique :**
+Au premier login Firebase Auth, les données existantes en localStorage sont automatiquement migrées vers le nouveau document Firestore lié au UID Firebase.
 
 ---
 
-### 5. Progressive Web App (PWA)
+### 5. Partage de Liste en Temps Réel
+
+#### Créer une liste partagée
+1. ⚙️ Paramètres → **"🔗 Créer une liste partagée"**
+2. Saisir un nom (ex: "Courses de la famille")
+3. La liste actuelle est copiée dans la liste partagée
+4. Un code court est généré (ex: `K7MN2X`)
+
+#### Rejoindre une liste
+1. ⚙️ Paramètres → saisir le code dans le champ → **Rejoindre**
+2. L'utilisateur est ajouté comme membre
+3. La liste partagée remplace la liste active
+
+#### Synchronisation temps réel
+- Utilise `onSnapshot` de Firestore (listener permanent)
+- Modifications d'un utilisateur → visibles chez l'autre en < 2 secondes
+- Pas besoin de recharger la page
+
+#### Indicateurs de présence
+- Visible dans les Paramètres quand une liste partagée est active
+- `● alice (vous)` en vert si actif dans les 3 dernières minutes
+- `● bob` en gris si inactif
+- Heartbeat automatique toutes les 60 secondes
+
+#### Gestion des listes
+- Un utilisateur peut être membre de **plusieurs listes**
+- Si plusieurs listes sans liste par défaut → sélecteur au démarrage
+- **"⭐ Définir par défaut"** → ouvre directement cette liste à la connexion
+- **"🔄 Changer de liste"** → réaffiche le sélecteur
+
+---
+
+### 6. Progressive Web App (PWA)
 
 #### Installation
 - **Chrome/Edge** : Icône "Installer" dans la barre d'adresse
@@ -166,18 +210,10 @@ Pour usage public → Migrer vers Firebase Authentication (email/password ou Goo
 - **Android** : Bannière d'installation automatique
 
 #### Fonctionnalités PWA
-- ✅ **Icônes** : 192px et 512px (ours dans un caddie)
+- ✅ **Icônes** : 192px et 512px
 - ✅ **Service Worker** : Cache pour mode hors-ligne
 - ✅ **Manifest** : Métadonnées de l'app
 - ✅ **Mises à jour** : Icône cliquable pour installer les MAJ
-
-#### Système de mise à jour
-```
-🔔 Mise à jour disponible !
-   (icône cliquable dans le header)
-
-Clic → Popup de confirmation → Mise à jour
-```
 
 ---
 
@@ -188,8 +224,8 @@ Clic → Popup de confirmation → Mise à jour
 | Composant | Technologie | Raison |
 |-----------|-------------|--------|
 | Frontend | HTML/CSS/JavaScript vanilla | Simplicité, performance, pas de framework |
-| Base de données | Firebase Firestore | Temps réel, gratuit, facile |
-| Authentification | Code personnel (custom) | Simple pour MVP (à migrer vers Firebase Auth) |
+| Base de données | Firebase Firestore | Temps réel (onSnapshot), gratuit, facile |
+| Authentification | Firebase Authentication | Email/mdp + Google, sécurisé, gratuit |
 | Cache local | localStorage | Instantané, mode offline |
 | PWA | Service Worker + Manifest | Installation, offline, native-like |
 | Hosting | GitHub Pages | Gratuit, HTTPS, déploiement auto |
@@ -211,14 +247,17 @@ Clic → Popup de confirmation → Mise à jour
 - Pas de hover effects critiques
 
 #### 3. Offline-First
-- localStorage comme source de vérité
-- Firebase comme backup/sync
-- App utilisable sans connexion
+- localStorage comme source de vérité locale
+- Firebase comme source de vérité cloud
+- App utilisable sans connexion (liste perso)
 
-#### 4. Debouncing
-- 5 secondes d'attente avant Firebase
-- Groupe les actions rapides en 1 seul appel
-- Économie de 60-70% d'appels
+#### 4. Debouncing + Real-time hybride
+- Liste personnelle : debouncing 5s + `set()`
+- Liste partagée : debouncing 5s + `set()` pour écriture, `onSnapshot` pour lecture
+
+#### 5. Sécurité Anti-XSS
+- Fonction `escapeHtml()` appliquée sur tous les noms d'articles et de plats avant injection dans `innerHTML`
+- Empêche l'exécution de code HTML/JS malveillant saisi par l'utilisateur
 
 ---
 
@@ -228,42 +267,30 @@ Clic → Popup de confirmation → Mise à jour
 
 ```javascript
 {
-  "userCode": "Maxou",
-  
   "groceryList": {
     "fruits": [
       {
         "id": 1709123456789,
         "name": "Bananes",
         "checked": true,
-        "quantity": "7"           // Optionnel
-      },
-      {
-        "id": 1709123456790,
-        "name": "Pommes",
-        "checked": false
+        "quantity": "7"
       }
     ],
     "legumes": [ ... ]
   },
-  
   "meals": {
     "1709123456791": {
       "name": "Pâtes Carbonara",
       "selected": false,
       "ingredients": [
-        { "category": "epicerie", "itemId": 1709123456789 },
-        { "category": "viande", "itemId": 1709123456790 },
-        { "category": "produits-laitiers", "itemId": 1709123456791 }
+        { "category": "epicerie", "itemId": 1709123456789 }
       ]
     }
   },
-  
   "collapsedCategories": {
     "fruits": false,
     "legumes": true
   },
-  
   "mealsCollapsed": false,
   "articlesCollapsed": false
 }
@@ -271,15 +298,48 @@ Clic → Popup de confirmation → Mise à jour
 
 ### Format Firebase Firestore
 
-**Collection** : `users`
-**Document** : `user_ENCODEDCODE` (ex: `user_TWF4b3U=` pour "Maxou")
+#### Collection `users/{uid}` — Liste personnelle + préférences
 
 ```javascript
 {
-  "groceryList": { ... },      // Identique à localStorage
+  "groceryList": { ... },
   "meals": { ... },
   "collapsedCategories": { ... },
-  "lastUpdated": Timestamp     // Timestamp serveur Firebase
+  "listMemberships": ["listId1", "listId2"],  // Listes partagées rejointes
+  "defaultListId": "listId1",                  // null = liste perso par défaut
+  "lastUpdated": Timestamp
+}
+```
+
+#### Collection `lists/{listId}` — Liste partagée
+
+```javascript
+{
+  "name": "Courses de la famille",
+  "groceryList": { ... },
+  "meals": { ... },
+  "collapsedCategories": { ... },
+  "members": ["uid1", "uid2"],
+  "memberEmails": {
+    "uid1": "alice@example.com",
+    "uid2": "bob@gmail.com"
+  },
+  "ownerId": "uid1",
+  "presence": {
+    "uid1": { "email": "alice@...", "lastSeen": Timestamp },
+    "uid2": { "email": "bob@...", "lastSeen": Timestamp }
+  },
+  "lastUpdated": Timestamp
+}
+```
+
+#### Collection `inviteCodes/{code}` — Codes d'invitation courts
+
+```javascript
+{
+  "listId": "abc123xyz",
+  "createdBy": "uid1",
+  "createdAt": Timestamp
 }
 ```
 
@@ -291,7 +351,7 @@ Clic → Popup de confirmation → Mise à jour
 
 ```
 liste-courses/
-├── 📄 liste-courses.html          # Application principale (2900+ lignes)
+├── 📄 liste-courses.html          # Application principale (~3500+ lignes)
 ├── 📄 tests.html                  # Page de tests automatisés
 ├── 📄 service-worker.js           # Service Worker PWA (cache)
 ├── 📄 manifest.json               # Manifest PWA (métadonnées)
@@ -311,120 +371,67 @@ liste-courses/
 ### Détail des fichiers
 
 #### liste-courses.html (Principal)
-**Taille** : ~2900 lignes  
+**Taille** : ~3500 lignes
 **Contenu** :
 - HTML complet (structure + modales)
-- CSS inline (~800 lignes)
-- JavaScript vanilla (~2000 lignes)
-- Firebase SDK (CDN)
+- CSS inline (~900 lignes)
+- JavaScript vanilla (~2500 lignes)
+- Firebase SDK (CDN) : App, Firestore, Auth
 
 **Sections JS principales :**
 ```javascript
-// Configuration Firebase
-const firebaseConfig = { ... }
+// Sécurité
+- escapeHtml(str)             // Anti-XSS, appliqué sur tous les noms
 
-// Variables globales
-let groceryList = {}
-let meals = {}
-let collapsedCategories = {}
+// Firebase Auth
+- loginWithEmail()            // Connexion email/mdp
+- registerWithEmail()         // Inscription email/mdp
+- loginWithGoogle()           // Connexion Google Sign-In
+- logout()                    // Déconnexion Firebase
 
-// Fonctions principales
-- renderCategories()          // Afficher les catégories
+// Partage de liste
+- createSharedList()          // Créer une liste nommée + code d'invitation
+- joinSharedList()            // Rejoindre via code court
+- leaveSharedList()           // Quitter une liste partagée
+- subscribeToSharedList()     // onSnapshot listener temps réel
+- checkListMembership()       // Vérifier qu'on est encore membre
+- showListPicker()            // Sélecteur de liste (multi-listes)
+- selectList()                // Choisir + optionnel: définir par défaut
+
+// Présence
+- updatePresence(online)      // Mettre à jour lastSeen dans Firestore
+- startPresenceHeartbeat()    // Heartbeat toutes les 60s
+- renderPresenceIndicators()  // Afficher les dots en ligne/hors-ligne
+
+// Sauvegarde
+- saveToLocalStorage()        // Sauvegarde locale immédiate + debouncing
+- saveToFirebase()            // Cible lists/{id} ou users/{uid} selon contexte
+- migrateLocalDataIfNeeded()  // Migration one-shot localStorage → Firebase
+
+// Auth listener
+- auth.onAuthStateChanged()   // Point d'entrée principal de l'app
+
+// Rendu
+- renderCategories()          // Afficher les catégories d'articles
 - renderMeals()               // Afficher les plats
-- saveToLocalStorage()        // Sauvegarde locale (+ debouncing)
-- saveToFirebase()            // Sauvegarde cloud
-- loadFromFirebase()          // Chargement initial
-- initializeDefaultItems()    // Items par défaut
+- updateShareUI()             // Afficher/masquer sections partage dans Paramètres
 
-// Gestion des articles
-- addItem()
-- deleteItem()
-- toggleItem()
-- openQuantityModal()
-- confirmQuantity()
+// Articles
+- addItem() / deleteItem() / toggleItem()
+- openQuantityModal() / confirmQuantity()
+- openRenameModal() / confirmRename()
+- openMoveModal() / moveItemToCategory()
 
-// Gestion des plats
-- openMealModal()
-- confirmMeal()
-- toggleMeal()
-- deleteMeal()
+// Plats
+- openMealModal() / confirmMeal()
+- toggleMeal() / deleteMeal()
+- openEditMealModal() / confirmEditMeal()
 
 // Drag & drop
 - handleDragStart/End/Over/Drop()
 - initializeDragAndDrop()
+- initializeMealsDragAndDrop()
 ```
-
-#### tests.html (Tests)
-**Taille** : ~700 lignes  
-**Tests implémentés** :
-1. Test Debouncing (5s)
-2. Test Sauvegarde Forcée
-3. Test Ajout Article
-4. Test Suppression Article
-5. Test Création Plat
-6. Test Cocher Plat
-
-**Interface** : Boutons individuels + "Lancer tous les tests"
-
-#### service-worker.js (PWA)
-```javascript
-const CACHE_NAME = 'liste-courses-v1.2'
-const urlsToCache = [
-  '/',
-  '/liste-courses.html',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png'
-]
-
-// Installation
-self.addEventListener('install', ...)
-
-// Activation
-self.addEventListener('activate', ...)
-
-// Fetch (stratégie Network-First)
-self.addEventListener('fetch', ...)
-```
-
-#### manifest.json (PWA)
-```json
-{
-  "name": "Ma Liste de Courses",
-  "short_name": "Liste Courses",
-  "start_url": "/liste-courses.html",
-  "display": "standalone",
-  "background_color": "#667eea",
-  "theme_color": "#667eea",
-  "icons": [
-    {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
-  ]
-}
-```
-
-#### .github/workflows/test.yml (CI/CD)
-**Déclencheurs** :
-- Push sur branche `main`
-- Pull Request vers `main`
-- Manuel (workflow_dispatch)
-
-**Jobs** :
-1. Checkout du code
-2. Setup Node.js (v18)
-3. Installation Playwright
-4. Exécution des tests (headless Chrome)
-5. Upload des résultats (artifacts)
-
-**Durée** : ~30 secondes
 
 ---
 
@@ -443,30 +450,30 @@ const firebaseConfig = {
 };
 ```
 
-### Règles Firestore (Actuelles - Temporaires)
+### SDK Firebase chargés
 
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /users/{userId}/{document=**} {
-      allow read, write: if true;  // ⚠️ PAS SÉCURISÉ
-    }
-  }
-}
+```html
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 ```
 
-**⚠️ À faire** : Migrer vers Firebase Authentication + règles strictes
-
-### Règles Firestore (Recommandées - Future)
+### Règles Firestore (Actuelles)
 
 ```javascript
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null 
-                        && request.auth.uid == userId;
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    match /lists/{listId} {
+      allow read, write: if request.auth != null && request.auth.uid in resource.data.members;
+      allow create: if request.auth != null && request.auth.uid in request.resource.data.members;
+    }
+    match /inviteCodes/{code} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
     }
   }
 }
@@ -474,15 +481,21 @@ service cloud.firestore {
 
 ### Restrictions API Key (Configurées)
 
-**Application restrictions :**
-- Type : HTTP referrers
-- Domaines autorisés :
-  - `https://garamino.github.io/*`
-  - `http://localhost:*`
-  - `http://127.0.0.1:*`
+**Application restrictions — HTTP referrers :**
+- `https://garamino.github.io/*`
+- `https://liste-course-8c2cf.firebaseapp.com/*`
+- `https://liste-course-8c2cf.web.app/*`
+- `http://localhost:*`
+- `http://127.0.0.1:*`
 
 **API restrictions :**
-- Cloud Firestore API uniquement
+- Cloud Firestore API
+- Identity Toolkit API (requis pour Firebase Auth)
+
+### Providers Firebase Auth (activés)
+
+- ✅ Email / Mot de passe
+- ✅ Google Sign-In
 
 ---
 
@@ -492,11 +505,13 @@ service cloud.firestore {
 
 #### 1. Créer un compte
 ```
-Écran d'accueil
-├─ Se connecter avec un code existant
-└─ Créer un nouveau compte
-    └─ Choisir un code personnel (ex: "Maxou")
-        └─ ✅ Compte créé
+Écran de connexion
+├─ Saisir email + mot de passe → [Se connecter]
+├─ [🔵 Continuer avec Google]
+└─ [Créer un compte]
+    ├─ Email
+    ├─ Mot de passe (min. 6 car.)
+    └─ Confirmer le mot de passe → [Créer mon compte]
 ```
 
 #### 2. Ajouter des articles
@@ -505,76 +520,46 @@ service cloud.firestore {
     ↓
 Modal "Ajouter un article"
     ├─ Nom : Bananes
-    └─ Catégorie : 🍎 Fruits
+    └─ Catégorie : 🍎 Fruits → [Ajouter]
         ↓
-    [Ajouter] (ou Entrée)
-        ↓
-✅ Article ajouté dans la catégorie Fruits
+✅ Article ajouté dans Fruits
 ```
 
-#### 3. Créer un plat
+#### 3. Partager sa liste
 ```
-🍽️ Mes Plats ▼ [+ Nouveau plat]
+⚙️ Paramètres → [🔗 Créer une liste partagée]
     ↓
-Modal "Créer un plat"
-    ├─ Nom : Pâtes Carbonara
-    └─ Sélectionner les ingrédients :
-        ☑️ Pâtes (Épicerie)
-        ☑️ Lardons (Viande)
-        ☑️ Œufs (Produits Laitiers)
-        ☑️ Crème (Produits Laitiers)
-        ↓
-    [Créer]
-        ↓
-✅ Plat créé avec 4 ingrédients
+Nom : "Courses de la famille"
+    ↓
+Code généré : K7MN2X
+    ↓
+Partager ce code avec l'autre utilisateur
 ```
 
-#### 4. Utiliser le plat
+#### 4. Rejoindre une liste partagée
 ```
-🍽️ Mes Plats
-    ☐ Pâtes Carbonara  ← Clic sur la checkbox
-        ↓
-✅ Pâtes Carbonara
+⚙️ Paramètres → saisir "K7MN2X" → [Rejoindre]
     ↓
-📦 Mes Articles
-    ✅ Pâtes (automatiquement coché)
-    ✅ Lardons (automatiquement coché)
-    ✅ Œufs (automatiquement coché)
-    ✅ Crème (automatiquement coché)
+✅ Liste "Courses de la famille" active
+    ↓
+● alice (vous)  ● bob
 ```
 
 ---
 
-### Workflow quotidien
+### Workflow quotidien avec liste partagée
 
-#### Scénario : Planifier les courses de la semaine
+**Alice (à la maison) :**
+1. Ouvre l'app → liste partagée "Courses famille" active
+2. Coche les plats de la semaine → ingrédients auto-cochés
+3. Ajoute : Pain [3], Lait [2L]
+4. Bob voit les modifications en temps réel sur son téléphone
 
-**Lundi (à la maison) :**
-1. Ouvrir l'app
-2. Cocher les plats de la semaine :
-   - ✅ Pâtes Carbonara (lundi)
-   - ✅ Poulet rôti (mardi)
-   - ✅ Salade César (mercredi)
-3. → Tous les ingrédients sont cochés automatiquement
-4. Ajouter articles ponctuels :
-   - + Pain [3]
-   - + Lait [2L]
-   - + Yaourts [12]
-5. Synchronisation automatique (5 secondes)
-
-**Mardi (au supermarché) :**
-1. Ouvrir l'app (mode offline si mauvais réseau)
-2. Voir la liste complète
-3. Cocher au fur et à mesure :
-   - ✅ Pâtes (dans le caddie)
-   - ✅ Lardons (dans le caddie)
-   - ...
-4. Filtrer sur "À acheter" pour voir ce qui reste
-5. Synchronisation automatique au retour (WiFi)
-
-**Mercredi :**
-1. Décocher les plats/articles consommés
-2. Rebelote pour jeudi/vendredi
+**Bob (au supermarché) :**
+1. Ouvre l'app → même liste partagée
+2. Coche les articles au fur et à mesure
+3. Alice voit les articles cochés en temps réel
+4. Filtrer sur "Non sélectionnés" pour voir ce qui reste
 
 ---
 
@@ -583,95 +568,22 @@ Modal "Créer un plat"
 ### Page de tests : tests.html
 
 **Accès :**
-- Direct : `https://votre-url/tests.html`
-- Via paramètres (réservé à "Maxou") : ⚙️ → 🧪 Mode Développeur → Ouvrir la page de tests
+- Direct : `https://garamino.github.io/Garam-Shopping-List/tests.html`
+- Via paramètres : ⚙️ → 🧪 Mode Développeur → Ouvrir la page de tests
 
 ### 6 Tests implémentés
 
-#### Test 1 : Debouncing (5 secondes)
-```
-Actions :
-1. Cocher 5 articles rapidement (200ms entre chaque)
-2. Attendre 6 secondes (debouncing + marge)
-3. Vérifier qu'il n'y a eu qu'UN SEUL appel Firebase
-
-Résultat attendu :
-✅ 1 appel Firebase (au lieu de 5)
-```
-
-#### Test 2 : Sauvegarde Forcée
-```
-Actions :
-1. Cocher un article
-2. Attendre 2 secondes (< 5s debouncing)
-3. Simuler fermeture (beforeunload)
-4. Vérifier qu'un appel Firebase a été forcé
-
-Résultat attendu :
-✅ Sauvegarde forcée détectée
-```
-
-#### Test 3 : Ajout Article
-```
-Actions :
-1. Créer un article "Test Article [timestamp]"
-2. Attendre la synchronisation (6s)
-3. Vérifier sa présence dans Firebase
-
-Résultat attendu :
-✅ Article trouvé dans Firebase
-```
-
-#### Test 4 : Suppression Article
-```
-Actions :
-1. Créer un article
-2. Attendre sync (6s)
-3. Supprimer l'article
-4. Attendre sync (6s)
-5. Vérifier qu'il n'est plus dans Firebase
-
-Résultat attendu :
-✅ Article supprimé de Firebase
-```
-
-#### Test 5 : Création Plat
-```
-Actions :
-1. Créer un plat avec 2 ingrédients
-2. Attendre sync (6s)
-3. Vérifier dans Firebase
-
-Résultat attendu :
-✅ Plat trouvé avec 2 ingrédients
-```
-
-#### Test 6 : Cocher Plat
-```
-Actions :
-1. Créer un plat avec 3 ingrédients (Bananes, Pommes, Oranges)
-2. Cocher le plat
-3. Vérifier que les 3 ingrédients sont cochés
-
-Résultat attendu :
-✅ Les 3 ingrédients cochés
-```
+1. **Debouncing (5s)** — Vérifie qu'un seul appel Firebase est fait après plusieurs actions rapides
+2. **Sauvegarde Forcée** — Vérifie la sauvegarde lors du beforeunload
+3. **Ajout Article** — Crée un article et vérifie sa présence dans Firebase
+4. **Suppression Article** — Crée puis supprime, vérifie l'absence dans Firebase
+5. **Création Plat** — Crée un plat avec ingrédients et vérifie dans Firebase
+6. **Cocher Plat** — Vérifie que cocher un plat coche tous ses ingrédients
 
 ### GitHub Actions (CI/CD)
 
-**Automatisation :**
 ```
-Commit + Push sur GitHub
-    ↓
-GitHub Actions se déclenche
-    ↓
-Installation Playwright
-    ↓
-Exécution des 6 tests (headless Chrome)
-    ↓
-Résultats :
-    ├─ ✅ 6/6 tests réussis → Badge vert
-    └─ ❌ X/6 tests échoués → Badge rouge + Email
+Push sur main → GitHub Actions → Playwright → 6 tests → Badge vert/rouge
 ```
 
 **Durée totale** : ~40 secondes
@@ -682,150 +594,71 @@ Résultats :
 
 ### 1. Debouncing Firebase (5 secondes)
 
-**Principe :**
-- Attendre 5 secondes d'inactivité avant d'appeler Firebase
-- Si nouvelle action avant 5s → Timer se réinitialise
-- Sauvegarde locale instantanée (pas d'attente)
-
 **Impact :**
 ```
-AVANT (sans debouncing) :
-Session de 40 actions = 40 écritures Firebase
-
-APRÈS (avec debouncing 5s) :
-Session de 40 actions = ~12-15 écritures Firebase
-
+AVANT : Session 40 actions = 40 écritures Firebase
+APRÈS : Session 40 actions = ~12-15 écritures Firebase
 Économie : 60-70% 📉
 ```
 
-**Code :**
-```javascript
-let saveTimeout = null;
+### 2. onSnapshot pour les listes partagées
 
-function saveToLocalStorage() {
-    // Sauvegarde locale IMMÉDIATE
-    localStorage.setItem('groceryList', JSON.stringify(groceryList));
-    
-    // Debouncing pour Firebase
-    clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(() => {
-        saveToFirebase();
-    }, 5000); // 5 secondes
+- Remplace les lectures `get()` ponctuelles par un listener permanent
+- Les mises à jour des autres utilisateurs arrivent automatiquement
+- Pas de polling, pas de rechargement
+
+### 3. Sauvegarde Forcée (beforeunload)
+
+Si l'utilisateur ferme l'app en < 5 secondes, la sauvegarde est forcée immédiatement. La présence est aussi mise à jour (lastSeen = 0) pour signaler la déconnexion.
+
+### 4. Heartbeat de présence (60s)
+
+Toutes les 60 secondes, l'app met à jour `lastSeen` dans Firestore. Un utilisateur est considéré "en ligne" si son lastSeen date de moins de 3 minutes.
+
+### 5. Anti-XSS (escapeHtml)
+
+```javascript
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = String(str || '');
+    return div.innerHTML;
 }
 ```
-
-### 2. Sauvegarde Forcée (beforeunload)
-
-**Problème** : Si l'utilisateur ferme l'app < 5 secondes après une action, les modifications ne sont pas synchronisées.
-
-**Solution** :
-```javascript
-window.addEventListener('beforeunload', function() {
-    if (saveTimeout) {
-        clearTimeout(saveTimeout);
-        saveToFirebase(); // Force la sauvegarde IMMÉDIATE
-    }
-});
-```
-
-### 3. Indicateurs visuels
-
-**États de synchronisation :**
-```
-💾 Modifications en attente...  (0-5 secondes après action)
-🔄 Synchronisation...            (appel Firebase en cours)
-✅ Sauvegardé dans le cloud      (succès - affiché 2s)
-☁️ Connecté                      (état normal)
-⚠️ Erreur de synchronisation    (échec)
-```
-
-**Transparence** : L'utilisateur sait toujours où en est sa synchronisation.
+Appliqué systématiquement sur : `item.name`, `meal.name`, noms d'ingrédients dans les labels.
 
 ---
 
 ## 🔒 Sécurité
 
-### État actuel : Simple (MVP)
+### État actuel : Sécurisé (v2.0)
 
-**Système actuel :**
-- Code personnel → userId
-- Pas de vérification de mot de passe
-- Clé API publique dans le code
+| Aspect | État |
+|--------|------|
+| Authentification | ✅ Firebase Auth (email/mdp + Google) |
+| Isolation des données | ✅ Règles Firestore par UID Firebase |
+| Accès liste partagée | ✅ Vérifié par membership (`members` array) |
+| XSS | ✅ escapeHtml() sur toutes les entrées utilisateur |
+| Clé API | ✅ Restreinte par domaine HTTP + API |
+| Brute-force | ✅ Firebase Auth bloque automatiquement |
 
-**Sécurité actuelle :**
-- ✅ Clé API restreinte (domaines autorisés uniquement)
-- ✅ Règles Firestore basiques (isolement par userId)
-- ⚠️ N'importe qui peut deviner un userId
+### Restrictions API Key
 
-**Usage recommandé :**
-- ✅ Famille/amis (5-20 personnes)
-- ❌ Usage public/production
+La clé API Firebase est visible dans le code source (pratique standard pour apps web). Elle est sécurisée par :
+1. **Restriction de domaine** : ne fonctionne que depuis `garamino.github.io`, Firebase et localhost
+2. **Restriction d'API** : uniquement Firestore et Identity Toolkit
+3. **Règles Firestore** : chaque utilisateur ne peut accéder qu'à ses propres données ou aux listes dont il est membre
 
----
+### Ce qui reste à améliorer
 
-### Migration recommandée : Firebase Authentication
-
-**Pour usage public, implémenter :**
-
-#### 1. Firebase Authentication
-```javascript
-// Email + Mot de passe
-firebase.auth().createUserWithEmailAndPassword(email, password)
-firebase.auth().signInWithEmailAndPassword(email, password)
-
-// Ou Google Sign-In
-const provider = new firebase.auth.GoogleAuthProvider();
-firebase.auth().signInWithPopup(provider)
-```
-
-#### 2. Règles Firestore strictes
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null 
-                        && request.auth.uid == userId;
-    }
-  }
-}
-```
-
-#### 3. Firebase App Check
-```javascript
-const appCheck = firebase.appCheck();
-appCheck.activate('recaptcha-v3-site-key', true);
-```
-
-**Bénéfices :**
-- ✅ Vraie sécurité (email vérifié, mot de passe crypté)
-- ✅ Isolation complète entre utilisateurs
-- ✅ Protection contre bots et abus
-- ✅ Gratuit jusqu'à 50,000 utilisateurs/mois
-
----
-
-### Alertes Google Cloud
-
-**Situation actuelle :**
-- Google scanne GitHub et détecte la clé API publique
-- Envoie des emails d'alerte
-
-**Réponse :**
-- ✅ Clé API restreinte → Risque limité
-- ✅ C'est une pratique standard pour apps web
-- ✅ Instagram, Twitter, Netflix font pareil
-
-**Solutions :**
-1. Ignorer les emails (créer un filtre Gmail)
-2. Rendre le repo privé (perd l'accès public)
-3. Utiliser GitHub Actions avec secrets (plus complexe)
+- ⚠️ Les codes d'invitation `inviteCodes` ne sont pas nettoyés (peuvent s'accumuler)
+- ⚠️ Pas de limite sur le nombre de listes qu'un utilisateur peut créer
+- ⚠️ Le propriétaire d'une liste ne peut pas exclure un membre
 
 ---
 
 ## 🗺️ Roadmap
 
-### ✅ Fonctionnalités Actuelles (v1.0)
+### ✅ Fonctionnalités Actuelles (v2.0)
 
 - ✅ Gestion articles (CRUD complet)
 - ✅ Gestion plats (création, ingrédients auto-cochés)
@@ -837,75 +670,65 @@ appCheck.activate('recaptcha-v3-site-key', true);
 - ✅ Tests automatisés (6 tests + CI/CD)
 - ✅ Responsive mobile-first
 - ✅ Indicateurs de sync visuels
+- ✅ **Firebase Authentication (email/mdp + Google Sign-In)**
+- ✅ **Partage de liste en temps réel (onSnapshot)**
+- ✅ **Indicateur de présence (qui est en ligne)**
+- ✅ **Multi-listes avec sélecteur et liste par défaut**
+- ✅ **Protection XSS (escapeHtml)**
 
 ---
 
-### 🔜 Fonctionnalités Prévues (v2.0)
+### 🔜 Fonctionnalités Prévues (v3.0)
 
 #### Priorité Haute ⭐⭐⭐
 
-**1. Firebase Authentication**
-- Remplacer code personnel par email/password
-- Google Sign-In
-- Règles Firestore strictes
-- Durée estimée : 4-6 heures
-
-**2. Partage de Liste (Collaboration)**
-- Liste partagée entre plusieurs personnes (couple, famille)
-- Synchronisation temps réel
-- Permissions (admin, éditeur, lecteur)
-- Indicateur de présence ("Marie modifie...")
-- Durée estimée : 8-12 heures
-
-**3. Mode Hors-ligne Amélioré**
+**1. Mode Hors-ligne Amélioré**
 - Compteur de modifications non sync
 - Bouton "Synchroniser maintenant"
 - Indicateur connexion (vert/rouge)
-- Toast notifications
 - Durée estimée : 2-3 heures
+
+**2. Nettoyage des inviteCodes**
+- Expiration automatique des codes après 7 jours
+- Cloud Function ou règle Firestore TTL
+- Durée estimée : 1-2 heures
 
 #### Priorité Moyenne ⭐⭐
 
-**4. Smart Suggestions & Historique**
+**3. Smart Suggestions & Historique**
 - Suggestions basées sur fréquence d'achat
-- "Vous achetez souvent Bananes..."
 - Templates de listes ("Ma liste du lundi")
-- Réutiliser une liste passée
 - Durée estimée : 5-7 heures
 
-**5. Mode Sombre**
+**4. Mode Sombre**
 - Toggle dans paramètres
 - Préférence sauvegardée
 - Durée estimée : 1-2 heures
 
-**6. Export / Impression**
+**5. Export / Impression**
 - PDF de la liste
-- Email
-- WhatsApp/SMS
+- Partage WhatsApp/SMS
+- Durée estimée : 3-4 heures
+
+**6. Gestion des membres (admin)**
+- Le propriétaire peut retirer un membre
+- Rôles : admin / éditeur
 - Durée estimée : 3-4 heures
 
 #### Priorité Basse ⭐
 
 **7. Statistiques**
-- Articles les plus achetés
-- Fréquence d'achat
+- Articles les plus achetés, fréquence
 - Graphiques
 - Durée estimée : 4-6 heures
 
 **8. Catégories personnalisées**
-- Créer ses propres catégories
-- Icônes personnalisées
+- Créer ses propres catégories + icônes
 - Durée estimée : 2-3 heures
 
-**9. Multi-listes**
-- Liste courses
-- Liste bricolage
-- Liste pharmacie
-- Durée estimée : 3-4 heures
-
-**10. Scan codes-barres** (Avancé)
+**9. Scan codes-barres** (Avancé)
 - Ajouter article par scan
-- Base de données produits (OpenFoodFacts)
+- Base OpenFoodFacts
 - Durée estimée : 8-10 heures
 
 ---
@@ -920,15 +743,9 @@ appCheck.activate('recaptcha-v3-site-key', true);
 - ✅ 1 GB stockage
 - ✅ 10 GB bande passante/mois
 
-**Usage actuel (5 utilisateurs) :**
-- Lectures : ~50/jour (0.1% de la limite)
-- Écritures : ~200/jour (1% de la limite)
-- Stockage : ~50 KB (0.005% de la limite)
+**Note onSnapshot :** Chaque listener `onSnapshot` actif compte comme une lecture à chaque modification reçue. Pour 5 utilisateurs simultanés → impact négligeable.
 
-**Capacité :**
-- ✅ Jusqu'à ~1000 utilisateurs actifs : **GRATUIT**
-- 🔶 1000-5000 utilisateurs : ~$10-15/mois
-- 🔴 5000+ utilisateurs : ~$50-100/mois
+**Authentification :** Gratuit jusqu'à 50,000 utilisateurs actifs/mois.
 
 ---
 
@@ -941,17 +758,6 @@ appCheck.activate('recaptcha-v3-site-key', true);
 - SEO : 90/100
 - PWA : ✅ Installable
 
-**Temps de chargement :**
-- First Contentful Paint : ~0.8s
-- Time to Interactive : ~1.2s
-- Total Blocking Time : ~50ms
-
-**Taille :**
-- HTML + CSS + JS : ~85 KB
-- Icons : ~30 KB
-- Total (sans cache) : ~115 KB
-- Total (avec cache) : ~5 KB (Service Worker)
-
 ---
 
 ## 🤝 Contribution
@@ -960,44 +766,29 @@ appCheck.activate('recaptcha-v3-site-key', true);
 
 **JavaScript :**
 - camelCase pour variables et fonctions
-- PascalCase pour constantes globales
 - Indentation : 4 espaces
-- Commentaires : `//` pour inline, `/* */` pour blocs
+- `escapeHtml()` obligatoire avant tout `innerHTML` avec données utilisateur
+- Fonctions async/await pour toutes les opérations Firebase
 
 **CSS :**
 - kebab-case pour classes
 - Mobile-first (media queries min-width)
-- Variables CSS pour couleurs
 
 **HTML :**
 - Indentation : 4 espaces
 - Attributs entre guillemets doubles
-- Sémantique (header, main, section, article)
 
 ---
 
 ### Git Workflow
 
 ```bash
-# 1. Cloner le repo
 git clone https://github.com/garamino/liste-courses.git
-
-# 2. Créer une branche feature
 git checkout -b feature/nom-feature
-
-# 3. Développer et tester
 # ... modifications ...
-
-# 4. Commit
-git add .
 git commit -m "feat: Description de la feature"
-
-# 5. Push
 git push origin feature/nom-feature
-
-# 6. Créer une Pull Request sur GitHub
-# 7. Tests automatiques s'exécutent
-# 8. Merge si tests OK
+# Pull Request → Tests auto → Merge si OK
 ```
 
 **Format des commits :**
@@ -1007,26 +798,7 @@ git push origin feature/nom-feature
 - `style:` Formatage, CSS
 - `refactor:` Refactoring code
 - `test:` Ajout/modification tests
-- `chore:` Maintenance
-
----
-
-## 📞 Support & Contact
-
-### Bugs & Suggestions
-
-**GitHub Issues :**
-- Créer une issue sur le repo
-- Template : Description, Steps to reproduce, Expected, Actual
-
-**Email :**
-- (Ajouter votre email si souhaité)
-
-### Documentation supplémentaire
-
-- **Guide des tests** : `GUIDE-TESTS.md`
-- **README** : `README.md` (si créé)
-- **Code source** : Commentaires inline dans `liste-courses.html`
+- `security:` Correction de sécurité
 
 ---
 
@@ -1038,15 +810,15 @@ git push origin feature/nom-feature
 
 ## 🙏 Remerciements
 
-- **Firebase** : Backend gratuit et performant
+- **Firebase** : Backend gratuit et performant (Auth + Firestore)
 - **GitHub Pages** : Hosting gratuit et fiable
 - **Claude (Anthropic)** : Assistance au développement
 - **Communauté open-source** : Inspiration et outils
 
 ---
 
-**Dernière mise à jour** : Mars 2026  
-**Version** : 1.0  
+**Dernière mise à jour** : Mars 2026
+**Version** : 2.0
 **Auteur** : Garamino
 
 ---
