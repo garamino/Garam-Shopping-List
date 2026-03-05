@@ -1673,6 +1673,7 @@
                 name: listName.trim(),
                 groceryList: groceryList,
                 meals: meals,
+                mealOrder: mealOrder,
                 mealSections: mealSections,
                 mealSectionOrder: mealSectionOrder,
                 collapsedCategories: collapsedCategories,
@@ -1968,6 +1969,10 @@
                     meals = data.meals;
                     localStorage.setItem('meals', JSON.stringify(meals));
                 }
+                if (data.mealOrder) {
+                    mealOrder = data.mealOrder;
+                    localStorage.setItem('mealOrder', JSON.stringify(mealOrder));
+                }
                 if (data.mealSections) {
                     mealSections = data.mealSections;
                     localStorage.setItem('mealSections', JSON.stringify(mealSections));
@@ -2031,6 +2036,7 @@
         let searchTerm = '';
         let collapsedCategories = {};
         let meals = {};
+        let mealOrder = [];              // Ordre d'affichage des plats (IDs)
         let mealSections = {};           // { sectionId: { name: "Plats italiens" } }
         let mealSectionOrder = [];       // Ordre d'affichage des sections
         let collapsedMealSections = {};  // { sectionId: true/false }
@@ -2043,6 +2049,7 @@
             const saved = localStorage.getItem('groceryList');
             const savedMeals = localStorage.getItem('meals');
             const savedMealSections = localStorage.getItem('mealSections');
+            const savedMealOrder = localStorage.getItem('mealOrder');
             const savedMealSectionOrder = localStorage.getItem('mealSectionOrder');
             const savedCollapsedMealSections = localStorage.getItem('collapsedMealSections');
             const savedMealsCollapsed = localStorage.getItem('mealsCollapsed');
@@ -2073,6 +2080,9 @@
             
             if (savedMeals) {
                 meals = JSON.parse(savedMeals);
+            }
+            if (savedMealOrder) {
+                mealOrder = JSON.parse(savedMealOrder);
             }
             if (savedMealSections) {
                 mealSections = JSON.parse(savedMealSections);
@@ -2293,6 +2303,7 @@
             localStorage.setItem('groceryList', JSON.stringify(groceryList));
             localStorage.setItem('collapsedCategories', JSON.stringify(collapsedCategories));
             localStorage.setItem('meals', JSON.stringify(meals));
+            localStorage.setItem('mealOrder', JSON.stringify(mealOrder));
             localStorage.setItem('mealSections', JSON.stringify(mealSections));
             localStorage.setItem('mealSectionOrder', JSON.stringify(mealSectionOrder));
             localStorage.setItem('collapsedMealSections', JSON.stringify(collapsedMealSections));
@@ -2324,6 +2335,7 @@
                 const dataToSave = {
                     groceryList: groceryList,
                     meals: meals,
+                    mealOrder: mealOrder,
                     mealSections: mealSections,
                     mealSectionOrder: mealSectionOrder,
                     collapsedCategories: collapsedCategories,
@@ -2398,6 +2410,7 @@
                     
                     if (data.groceryList) groceryList = data.groceryList;
                     if (data.meals) meals = data.meals;
+                    if (data.mealOrder) mealOrder = data.mealOrder;
                     if (data.mealSections) mealSections = data.mealSections;
                     if (data.mealSectionOrder) mealSectionOrder = data.mealSectionOrder;
                     if (data.collapsedCategories) collapsedCategories = data.collapsedCategories;
@@ -2405,6 +2418,7 @@
                     // Save to localStorage as backup
                     localStorage.setItem('groceryList', JSON.stringify(groceryList));
                     localStorage.setItem('meals', JSON.stringify(meals));
+                    localStorage.setItem('mealOrder', JSON.stringify(mealOrder));
                     localStorage.setItem('mealSections', JSON.stringify(mealSections));
                     localStorage.setItem('mealSectionOrder', JSON.stringify(mealSectionOrder));
                     localStorage.setItem('collapsedCategories', JSON.stringify(collapsedCategories));
@@ -2790,9 +2804,26 @@
             `;
         }
 
+        function getOrderedMealKeys() {
+            const allKeys = Object.keys(meals);
+            // Migration: si mealOrder est vide, initialiser avec les clés existantes
+            if (mealOrder.length === 0 && allKeys.length > 0) {
+                mealOrder = [...allKeys];
+            }
+            // Filtrer les IDs qui n'existent plus + ajouter les nouveaux à la fin
+            const validOrdered = mealOrder.filter(id => meals[id]);
+            const missing = allKeys.filter(id => !mealOrder.includes(id));
+            if (missing.length > 0) {
+                mealOrder = [...validOrdered, ...missing];
+            } else {
+                mealOrder = validOrdered;
+            }
+            return [...mealOrder];
+        }
+
         function renderMeals() {
             const container = document.getElementById('mealsList');
-            const mealKeys = Object.keys(meals);
+            const mealKeys = getOrderedMealKeys();
 
             if (mealKeys.length === 0 && mealSectionOrder.length === 0) {
                 container.innerHTML = `
@@ -3247,6 +3278,7 @@
             if (sectionId) {
                 meals[mealId].sectionId = sectionId;
             }
+            mealOrder.push(String(mealId));
 
             saveToLocalStorage();
             renderMeals();
@@ -3288,6 +3320,7 @@
         function deleteMeal(mealId) {
             if (confirm('Voulez-vous vraiment supprimer ce plat ?')) {
                 delete meals[mealId];
+                mealOrder = mealOrder.filter(id => id !== String(mealId));
                 saveToLocalStorage();
                 renderMeals();
             }
@@ -3875,21 +3908,15 @@
                     delete meals[draggedMealId].sectionId;
                 }
 
-                // Reorder within the target section context
-                const mealIds = Object.keys(meals);
-                const draggedIndex = mealIds.indexOf(draggedMealId);
-                const targetIndex = mealIds.indexOf(targetMealId);
+                // Reorder within mealOrder
+                const orderedKeys = getOrderedMealKeys();
+                const draggedIndex = orderedKeys.indexOf(draggedMealId);
+                const targetIndex = orderedKeys.indexOf(targetMealId);
 
                 if (draggedIndex > -1 && targetIndex > -1) {
-                    const reorderedIds = [...mealIds];
-                    const [removed] = reorderedIds.splice(draggedIndex, 1);
-                    reorderedIds.splice(targetIndex, 0, removed);
-
-                    const newMeals = {};
-                    reorderedIds.forEach(id => {
-                        newMeals[id] = meals[id];
-                    });
-                    meals = newMeals;
+                    const [removed] = orderedKeys.splice(draggedIndex, 1);
+                    orderedKeys.splice(targetIndex, 0, removed);
+                    mealOrder = orderedKeys;
                 }
 
                 saveToLocalStorage();
@@ -4194,6 +4221,7 @@
                     const dataToSave = {
                         groceryList: groceryList,
                         meals: meals,
+                        mealOrder: mealOrder,
                         mealSections: mealSections,
                         mealSectionOrder: mealSectionOrder,
                         collapsedCategories: collapsedCategories,
