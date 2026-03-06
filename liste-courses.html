@@ -1167,7 +1167,10 @@
                     📦 Mes Articles
                     <span class="category-chevron" id="articlesChevron" style="margin-left: 10px; font-size: 14px; transition: transform 0.3s;">▼</span>
                 </div>
-                <button class="add-meal-btn" onclick="event.stopPropagation(); openAddArticleModal()">+ Nouvel article</button>
+                <div class="meals-header-buttons">
+                    <button class="add-section-btn" onclick="event.stopPropagation(); openCreateArticleSectionModal()" title="Nouvelle section">+ Section</button>
+                    <button class="add-meal-btn" onclick="event.stopPropagation(); openAddArticleModal()">+ Nouvel article</button>
+                </div>
             </div>
             <div class="articles-content" id="articlesContent">
                 <div class="controls">
@@ -1246,18 +1249,7 @@
             <div class="modal-header">Ajouter un article</div>
             <input type="text" class="rename-input" id="modalArticleName" placeholder="Nom de l'article..." style="margin-bottom: 15px;">
             <select class="rename-input" id="modalArticleCategory" style="margin-bottom: 15px; height: 45px;">
-                <option value="">Sélectionnez une catégorie...</option>
-                <option value="fruits">🍎 Fruits</option>
-                <option value="legumes">🥬 Légumes</option>
-                <option value="viande">🥩 Viande</option>
-                <option value="poisson">🐟 Poisson</option>
-                <option value="produits-laitiers">🥛 Produits Laitiers</option>
-                <option value="epicerie">🥫 Épicerie</option>
-                <option value="boulangerie">🥖 Boulangerie</option>
-                <option value="surgeles">❄️ Surgelés</option>
-                <option value="boissons">🥤 Boissons</option>
-                <option value="hygiene">🧴 Hygiène & Entretien</option>
-                <option value="autre">📦 Autre</option>
+                <option value="">Sélectionnez une section...</option>
             </select>
             <div class="modal-buttons">
                 <button class="modal-confirm" onclick="confirmAddArticle()">Ajouter</button>
@@ -1294,6 +1286,7 @@
                 <button type="button" class="emoji-option" onclick="selectSectionEmoji('🍜', this)">🍜</button>
                 <button type="button" class="emoji-option" onclick="selectSectionEmoji('🥗', this)">🥗</button>
                 <button type="button" class="emoji-option" onclick="selectSectionEmoji('🍔', this)">🍔</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🍟', this)">🍟</button>
                 <button type="button" class="emoji-option" onclick="selectSectionEmoji('🌮', this)">🌮</button>
                 <button type="button" class="emoji-option" onclick="selectSectionEmoji('🥘', this)">🥘</button>
                 <button type="button" class="emoji-option" onclick="selectSectionEmoji('🍰', this)">🍰</button>
@@ -1328,6 +1321,41 @@
             <div class="modal-categories" id="mealSectionPickerList"></div>
             <div class="modal-buttons">
                 <button class="modal-cancel" onclick="closeMoveMealSectionModal()">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for creating/renaming article sections -->
+    <div id="articleSectionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header" id="articleSectionModalHeader">Nouvelle section</div>
+            <div class="emoji-picker" id="articleSectionEmojiPicker">
+                <button type="button" class="emoji-option selected" onclick="selectArticleSectionEmoji('📁', this)">📁</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('🍎', this)">🍎</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('🥬', this)">🥬</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('🥩', this)">🥩</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('🐟', this)">🐟</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('🥛', this)">🥛</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('🥫', this)">🥫</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('🥖', this)">🥖</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('❄️', this)">❄️</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('🥤', this)">🥤</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('🧴', this)">🧴</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('📦', this)">📦</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('🧀', this)">🧀</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('🥚', this)">🥚</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('🍫', this)">🍫</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('🍷', this)">🍷</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('🧹', this)">🧹</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('🏠', this)">🏠</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('⭐', this)">⭐</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('❤️', this)">❤️</button>
+            </div>
+            <input type="hidden" id="articleSectionEmojiValue" value="📁">
+            <input type="text" class="rename-input" id="articleSectionNameInput" placeholder="Nom de la section...">
+            <div class="modal-buttons">
+                <button class="modal-confirm" id="articleSectionConfirmBtn" onclick="confirmCreateArticleSection()">Créer</button>
+                <button class="modal-cancel" onclick="closeArticleSectionModal()">Annuler</button>
             </div>
         </div>
     </div>
@@ -1676,6 +1704,8 @@
                 mealOrder: mealOrder,
                 mealSections: mealSections,
                 mealSectionOrder: mealSectionOrder,
+                articleSections: articleSections,
+                articleSectionOrder: articleSectionOrder,
                 collapsedCategories: collapsedCategories,
                 members: [userId],
                 memberEmails: { [userId]: email },
@@ -1981,6 +2011,15 @@
                     mealSectionOrder = data.mealSectionOrder;
                     localStorage.setItem('mealSectionOrder', JSON.stringify(mealSectionOrder));
                 }
+                if (data.articleSections) {
+                    articleSections = data.articleSections;
+                    localStorage.setItem('articleSections', JSON.stringify(articleSections));
+                }
+                if (data.articleSectionOrder) {
+                    articleSectionOrder = data.articleSectionOrder;
+                    localStorage.setItem('articleSectionOrder', JSON.stringify(articleSectionOrder));
+                }
+                ensureArticleSections();
 
                 renderCategories();
                 renderMeals();
@@ -2031,6 +2070,24 @@
             'autre': { name: 'Autre', icon: '📦', items: [] }
         };
 
+        // Migration: seed articleSections from CATEGORIES if empty
+        function ensureArticleSections() {
+            if (articleSectionOrder.length === 0 && Object.keys(articleSections).length === 0) {
+                Object.keys(CATEGORIES).forEach(key => {
+                    articleSections[key] = { name: CATEGORIES[key].name, icon: CATEGORIES[key].icon };
+                    articleSectionOrder.push(key);
+                });
+            }
+            // Cleanup: remove sections that no longer exist
+            articleSectionOrder = articleSectionOrder.filter(id => articleSections[id]);
+            // Add any sections in articleSections not in order
+            Object.keys(articleSections).forEach(id => {
+                if (!articleSectionOrder.includes(id)) {
+                    articleSectionOrder.push(id);
+                }
+            });
+        }
+
         let groceryList = {};
         let currentFilter = 'all';
         let searchTerm = '';
@@ -2040,6 +2097,8 @@
         let mealSections = {};           // { sectionId: { name: "Plats italiens" } }
         let mealSectionOrder = [];       // Ordre d'affichage des sections
         let collapsedMealSections = {};  // { sectionId: true/false }
+        let articleSections = {};        // { sectionId: { name, icon } }
+        let articleSectionOrder = [];    // Ordre d'affichage des sections articles
         let mealsCollapsed = false;
         let articlesCollapsed = false;
 
@@ -2051,6 +2110,8 @@
             const savedMealSections = localStorage.getItem('mealSections');
             const savedMealOrder = localStorage.getItem('mealOrder');
             const savedMealSectionOrder = localStorage.getItem('mealSectionOrder');
+            const savedArticleSections = localStorage.getItem('articleSections');
+            const savedArticleSectionOrder = localStorage.getItem('articleSectionOrder');
             const savedCollapsedMealSections = localStorage.getItem('collapsedMealSections');
             const savedMealsCollapsed = localStorage.getItem('mealsCollapsed');
             const savedArticlesCollapsed = localStorage.getItem('articlesCollapsed');
@@ -2072,6 +2133,7 @@
             
             if (loadedFromFirebase) {
                 console.log('✅ Données chargées depuis Firebase');
+                ensureArticleSections();
                 return;
             }
 
@@ -2092,6 +2154,12 @@
             }
             if (savedCollapsedMealSections) {
                 collapsedMealSections = JSON.parse(savedCollapsedMealSections);
+            }
+            if (savedArticleSections) {
+                articleSections = JSON.parse(savedArticleSections);
+            }
+            if (savedArticleSectionOrder) {
+                articleSectionOrder = JSON.parse(savedArticleSectionOrder);
             }
 
             if (saved) {
@@ -2294,6 +2362,7 @@
                 };
                 saveToLocalStorage();
             }
+            ensureArticleSections();
         }
 
         let saveTimeout = null; // Timer for debouncing
@@ -2307,6 +2376,8 @@
             localStorage.setItem('mealSections', JSON.stringify(mealSections));
             localStorage.setItem('mealSectionOrder', JSON.stringify(mealSectionOrder));
             localStorage.setItem('collapsedMealSections', JSON.stringify(collapsedMealSections));
+            localStorage.setItem('articleSections', JSON.stringify(articleSections));
+            localStorage.setItem('articleSectionOrder', JSON.stringify(articleSectionOrder));
             localStorage.setItem('mealsCollapsed', mealsCollapsed.toString());
             localStorage.setItem('articlesCollapsed', articlesCollapsed.toString());
             
@@ -2338,6 +2409,8 @@
                     mealOrder: mealOrder,
                     mealSections: mealSections,
                     mealSectionOrder: mealSectionOrder,
+                    articleSections: articleSections,
+                    articleSectionOrder: articleSectionOrder,
                     collapsedCategories: collapsedCategories,
                     lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                 };
@@ -2413,7 +2486,10 @@
                     if (data.mealOrder) mealOrder = data.mealOrder;
                     if (data.mealSections) mealSections = data.mealSections;
                     if (data.mealSectionOrder) mealSectionOrder = data.mealSectionOrder;
+                    if (data.articleSections) articleSections = data.articleSections;
+                    if (data.articleSectionOrder) articleSectionOrder = data.articleSectionOrder;
                     if (data.collapsedCategories) collapsedCategories = data.collapsedCategories;
+                    ensureArticleSections();
 
                     // Save to localStorage as backup
                     localStorage.setItem('groceryList', JSON.stringify(groceryList));
@@ -2421,6 +2497,8 @@
                     localStorage.setItem('mealOrder', JSON.stringify(mealOrder));
                     localStorage.setItem('mealSections', JSON.stringify(mealSections));
                     localStorage.setItem('mealSectionOrder', JSON.stringify(mealSectionOrder));
+                    localStorage.setItem('articleSections', JSON.stringify(articleSections));
+                    localStorage.setItem('articleSectionOrder', JSON.stringify(articleSectionOrder));
                     localStorage.setItem('collapsedCategories', JSON.stringify(collapsedCategories));
                     
                     updateSyncStatus('synced');
@@ -2438,31 +2516,15 @@
         }
 
         function toggleCategory(categoryKey) {
-            collapsedCategories[categoryKey] = !collapsedCategories[categoryKey];
-            saveToLocalStorage();
-            
-            // Animate the toggle
-            const header = event.target.closest('.category-header');
-            const itemsList = header.nextElementSibling;
-            const chevron = header.querySelector('.category-chevron');
-            
-            if (collapsedCategories[categoryKey]) {
-                header.classList.add('collapsed');
-                itemsList.classList.add('collapsed');
-                chevron.classList.add('collapsed');
-            } else {
-                header.classList.remove('collapsed');
-                itemsList.classList.remove('collapsed');
-                chevron.classList.remove('collapsed');
-            }
+            toggleArticleSection(categoryKey);
         }
 
         function toggleAllCategories() {
             const btn = document.getElementById('collapseAllBtn');
-            const allCollapsed = Object.keys(CATEGORIES).every(key => collapsedCategories[key]);
-            
+            const allCollapsed = articleSectionOrder.every(key => collapsedCategories[key]);
+
             // Toggle all categories
-            Object.keys(CATEGORIES).forEach(categoryKey => {
+            articleSectionOrder.forEach(categoryKey => {
                 collapsedCategories[categoryKey] = !allCollapsed;
             });
             
@@ -2485,11 +2547,21 @@
             const modal = document.getElementById('addArticleModal');
             const nameInput = document.getElementById('modalArticleName');
             const categorySelect = document.getElementById('modalArticleCategory');
-            
+
+            // Populate select dynamically from articleSections
+            let optionsHtml = '<option value="">Sélectionnez une section...</option>';
+            articleSectionOrder.forEach(key => {
+                const section = articleSections[key];
+                if (section) {
+                    optionsHtml += `<option value="${key}">${section.icon} ${escapeHtml(section.name)}</option>`;
+                }
+            });
+            categorySelect.innerHTML = optionsHtml;
+
             nameInput.value = '';
             categorySelect.value = '';
             modal.classList.add('show');
-            
+
             setTimeout(() => {
                 nameInput.focus();
             }, 100);
@@ -2589,12 +2661,13 @@
             
             // Build category buttons (exclude current category)
             categoriesContainer.innerHTML = '';
-            Object.keys(CATEGORIES).forEach(categoryKey => {
+            articleSectionOrder.forEach(categoryKey => {
                 if (categoryKey !== fromCategory) {
-                    const category = CATEGORIES[categoryKey];
+                    const section = articleSections[categoryKey];
+                    if (!section) return;
                     const btn = document.createElement('button');
                     btn.className = 'modal-category-btn';
-                    btn.innerHTML = `${category.icon} ${category.name}`;
+                    btn.innerHTML = `${section.icon} ${section.name}`;
                     btn.onclick = () => moveItemToCategory(categoryKey);
                     categoriesContainer.appendChild(btn);
                 }
@@ -3152,6 +3225,241 @@
             closeMoveMealSectionModal();
         }
 
+        // ========================================
+        // ARTICLE SECTIONS CRUD
+        // ========================================
+        let currentRenameArticleSectionId = null;
+
+        function selectArticleSectionEmoji(emoji, btn) {
+            document.getElementById('articleSectionEmojiValue').value = emoji;
+            document.querySelectorAll('#articleSectionEmojiPicker .emoji-option').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+        }
+
+        function openCreateArticleSectionModal() {
+            const modal = document.getElementById('articleSectionModal');
+            const header = document.getElementById('articleSectionModalHeader');
+            const input = document.getElementById('articleSectionNameInput');
+            const confirmBtn = document.getElementById('articleSectionConfirmBtn');
+
+            header.textContent = 'Nouvelle section';
+            confirmBtn.textContent = 'Créer';
+            confirmBtn.onclick = confirmCreateArticleSection;
+            input.value = '';
+            currentRenameArticleSectionId = null;
+
+            document.getElementById('articleSectionEmojiValue').value = '📁';
+            document.querySelectorAll('#articleSectionEmojiPicker .emoji-option').forEach(b => b.classList.remove('selected'));
+            const defaultBtn = document.querySelector('#articleSectionEmojiPicker .emoji-option');
+            if (defaultBtn) defaultBtn.classList.add('selected');
+
+            modal.classList.add('show');
+            setTimeout(() => input.focus(), 100);
+        }
+
+        function closeArticleSectionModal() {
+            document.getElementById('articleSectionModal').classList.remove('show');
+            currentRenameArticleSectionId = null;
+        }
+
+        function confirmCreateArticleSection() {
+            const name = document.getElementById('articleSectionNameInput').value.trim();
+            if (!name) {
+                alert('Veuillez entrer un nom pour la section');
+                return;
+            }
+            const icon = document.getElementById('articleSectionEmojiValue').value || '📁';
+            const sectionId = String(Date.now());
+            articleSections[sectionId] = { name: name, icon: icon };
+            articleSectionOrder.push(sectionId);
+            groceryList[sectionId] = [];
+            closeArticleSectionModal();
+            saveToLocalStorage();
+            renderCategories();
+        }
+
+        function openRenameArticleSectionModal(sectionId) {
+            currentRenameArticleSectionId = sectionId;
+            const section = articleSections[sectionId];
+            if (!section) return;
+
+            const modal = document.getElementById('articleSectionModal');
+            const header = document.getElementById('articleSectionModalHeader');
+            const input = document.getElementById('articleSectionNameInput');
+            const confirmBtn = document.getElementById('articleSectionConfirmBtn');
+
+            header.textContent = 'Renommer la section';
+            confirmBtn.textContent = 'Renommer';
+            confirmBtn.onclick = confirmRenameArticleSection;
+            input.value = section.name;
+
+            const currentIcon = section.icon || '📁';
+            document.getElementById('articleSectionEmojiValue').value = currentIcon;
+            document.querySelectorAll('#articleSectionEmojiPicker .emoji-option').forEach(b => {
+                b.classList.toggle('selected', b.textContent.trim() === currentIcon);
+            });
+
+            modal.classList.add('show');
+            setTimeout(() => { input.focus(); input.select(); }, 100);
+        }
+
+        function confirmRenameArticleSection() {
+            if (currentRenameArticleSectionId === null) return;
+            const newName = document.getElementById('articleSectionNameInput').value.trim();
+            if (newName && articleSections[currentRenameArticleSectionId]) {
+                const icon = document.getElementById('articleSectionEmojiValue').value || '📁';
+                articleSections[currentRenameArticleSectionId].name = newName;
+                articleSections[currentRenameArticleSectionId].icon = icon;
+                saveToLocalStorage();
+                renderCategories();
+            }
+            closeArticleSectionModal();
+        }
+
+        function deleteArticleSection(sectionId) {
+            const section = articleSections[sectionId];
+            if (!section) return;
+
+            const items = groceryList[sectionId] || [];
+            const message = items.length > 0
+                ? `Supprimer la section "${section.name}" ?\n\n${items.length} article(s) seront aussi supprimés.`
+                : `Supprimer la section "${section.name}" ?`;
+
+            if (confirm(message)) {
+                delete groceryList[sectionId];
+                delete articleSections[sectionId];
+                articleSectionOrder = articleSectionOrder.filter(id => id !== sectionId);
+                delete collapsedCategories[sectionId];
+                saveToLocalStorage();
+                renderCategories();
+            }
+        }
+
+        function toggleArticleSection(sectionKey) {
+            collapsedCategories[sectionKey] = !collapsedCategories[sectionKey];
+            saveToLocalStorage();
+
+            const header = document.querySelector(`.category-header[data-section-id="${sectionKey}"]`);
+            if (header) {
+                const itemsList = header.nextElementSibling;
+                const chevron = header.querySelector('.category-chevron');
+                if (collapsedCategories[sectionKey]) {
+                    header.classList.add('collapsed');
+                    if (itemsList) itemsList.classList.add('collapsed');
+                    if (chevron) chevron.classList.add('collapsed');
+                } else {
+                    header.classList.remove('collapsed');
+                    if (itemsList) itemsList.classList.remove('collapsed');
+                    if (chevron) chevron.classList.remove('collapsed');
+                }
+            }
+        }
+
+        function toggleArticleSectionMenu(event, sectionId) {
+            event.stopPropagation();
+            const menuId = `article-section-menu-${sectionId}`;
+            const menu = document.getElementById(menuId);
+            const button = event.target;
+
+            document.querySelectorAll('.item-dropdown').forEach(dropdown => {
+                if (dropdown.id !== menuId) {
+                    dropdown.classList.remove('show');
+                    dropdown.classList.remove('open-upward');
+                }
+            });
+            document.querySelectorAll('.item-menu-btn').forEach(btn => {
+                if (btn !== button) btn.classList.remove('active');
+            });
+
+            menu.classList.toggle('show');
+            button.classList.toggle('active');
+
+            if (menu.classList.contains('show')) {
+                setTimeout(() => {
+                    const rect = menu.getBoundingClientRect();
+                    if (rect.bottom > window.innerHeight - 20) {
+                        menu.classList.add('open-upward');
+                    } else {
+                        menu.classList.remove('open-upward');
+                    }
+                }, 10);
+            }
+        }
+
+        let draggedArticleSection = null;
+
+        function initializeArticleSectionDragAndDrop() {
+            const sectionElements = document.querySelectorAll('[data-article-section-id][draggable="true"]');
+            sectionElements.forEach(section => {
+                section.addEventListener('dragstart', handleArticleSectionDragStart);
+                section.addEventListener('dragend', handleArticleSectionDragEnd);
+                section.addEventListener('dragover', handleArticleSectionDragOver);
+                section.addEventListener('drop', handleArticleSectionDrop);
+                section.addEventListener('dragleave', handleArticleSectionDragLeave);
+            });
+        }
+
+        function handleArticleSectionDragStart(e) {
+            if (draggedItem) return;
+            const handle = e.target.closest('.drag-handle');
+            const section = e.target.closest('[data-article-section-id]');
+            if (!handle || !section) {
+                e.preventDefault();
+                return;
+            }
+            draggedArticleSection = section;
+            section.classList.add('dragging-section');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', 'article-section');
+        }
+
+        function handleArticleSectionDragEnd(e) {
+            if (draggedArticleSection) {
+                draggedArticleSection.classList.remove('dragging-section');
+                draggedArticleSection = null;
+            }
+            document.querySelectorAll('[data-article-section-id]').forEach(s => {
+                s.classList.remove('drag-over-section');
+            });
+        }
+
+        function handleArticleSectionDragOver(e) {
+            if (!draggedArticleSection) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            const section = e.target.closest('[data-article-section-id]');
+            if (section && section !== draggedArticleSection) {
+                section.classList.add('drag-over-section');
+            }
+        }
+
+        function handleArticleSectionDragLeave(e) {
+            if (!draggedArticleSection) return;
+            const section = e.target.closest('[data-article-section-id]');
+            if (section) section.classList.remove('drag-over-section');
+        }
+
+        function handleArticleSectionDrop(e) {
+            if (!draggedArticleSection) return;
+            e.stopPropagation();
+            const targetSection = e.target.closest('[data-article-section-id]');
+            if (targetSection && draggedArticleSection !== targetSection) {
+                const draggedId = draggedArticleSection.dataset.articleSectionId;
+                const targetId = targetSection.dataset.articleSectionId;
+
+                const draggedIndex = articleSectionOrder.indexOf(draggedId);
+                const targetIndex = articleSectionOrder.indexOf(targetId);
+
+                if (draggedIndex > -1 && targetIndex > -1) {
+                    articleSectionOrder.splice(draggedIndex, 1);
+                    articleSectionOrder.splice(targetIndex, 0, draggedId);
+                    saveToLocalStorage();
+                    renderCategories();
+                }
+            }
+            return false;
+        }
+
         function toggleArticlesSection() {
             articlesCollapsed = !articlesCollapsed;
             saveToLocalStorage();
@@ -3183,24 +3491,24 @@
             confirmBtn.textContent = 'Créer le plat';
             nameInput.disabled = false;
             
-            // Build ingredient selector with all items grouped by category
+            // Build ingredient selector with all items grouped by section
             let html = '';
-            Object.keys(CATEGORIES).forEach(categoryKey => {
+            articleSectionOrder.forEach(categoryKey => {
                 const items = groceryList[categoryKey] || [];
                 if (items.length > 0) {
-                    const category = CATEGORIES[categoryKey];
+                    const section = articleSections[categoryKey];
+                    if (!section) return;
                     html += `
                         <div class="ingredient-category">
                             <div class="ingredient-category-header">
-                                ${category.icon} ${category.name}
+                                ${section.icon} ${section.name}
                             </div>
                             <div class="ingredient-list">
                                 ${items.map(item => {
-                                    // Use JSON to safely encode both category and itemId
                                     const value = JSON.stringify({ category: categoryKey, itemId: item.id });
                                     return `
                                         <div class="ingredient-checkbox-item">
-                                            <input type="checkbox" 
+                                            <input type="checkbox"
                                                    id="ing-${categoryKey}-${item.id}"
                                                    value='${value}'>
                                             <label for="ing-${categoryKey}-${item.id}">${escapeHtml(item.name)}</label>
@@ -3439,25 +3747,25 @@
                 
                 // Build ingredient selector with current selections checked
                 let html = '';
-                Object.keys(CATEGORIES).forEach(categoryKey => {
+                articleSectionOrder.forEach(categoryKey => {
                     const items = groceryList[categoryKey] || [];
                     if (items.length > 0) {
-                        const category = CATEGORIES[categoryKey];
+                        const section = articleSections[categoryKey];
+                        if (!section) return;
                         html += `
                             <div class="ingredient-category">
                                 <div class="ingredient-category-header">
-                                    ${category.icon} ${category.name}
+                                    ${section.icon} ${section.name}
                                 </div>
                                 <div class="ingredient-list">
                                     ${items.map(item => {
                                         const value = JSON.stringify({ category: categoryKey, itemId: item.id });
-                                        // Check if this ingredient is in the meal
-                                        const isChecked = meal.ingredients.some(ing => 
+                                        const isChecked = meal.ingredients.some(ing =>
                                             ing.category === categoryKey && String(ing.itemId) === String(item.id)
                                         );
                                         return `
                                             <div class="ingredient-checkbox-item">
-                                                <input type="checkbox" 
+                                                <input type="checkbox"
                                                        id="ing-${categoryKey}-${item.id}"
                                                        value='${value}'
                                                        ${isChecked ? 'checked' : ''}>
@@ -3601,64 +3909,114 @@
             return filtered;
         }
 
+        function renderItemsHtml(items, categoryKey) {
+            return items.map(item => `
+                <div class="item ${item.checked ? 'checked' : ''}"
+                     draggable="true"
+                     data-item-id="${item.id}"
+                     data-category="${categoryKey}">
+                    <span class="drag-handle">⋮⋮</span>
+                    <input type="checkbox" class="item-checkbox"
+                           ${item.checked ? 'checked' : ''}
+                           onchange="toggleItem('${categoryKey}', ${item.id})">
+                    <span class="item-name">${escapeHtml(item.name)}</span>
+                    ${item.quantity ? `<span class="quantity-badge" onclick="event.stopPropagation(); openQuantityModal('${categoryKey}', ${item.id})" title="Modifier la quantité">${item.quantity}</span>` : ''}
+                    <div class="item-actions">
+                        <button class="item-menu-btn" onclick="toggleItemMenu(event, '${categoryKey}', ${item.id})" title="Actions">
+                            ⋮
+                        </button>
+                        <div class="item-dropdown" id="menu-${categoryKey}-${item.id}">
+                            <button class="item-dropdown-item rename" onclick="openRenameModal('${categoryKey}', ${item.id}); closeAllMenus();">
+                                ✏️ Renommer
+                            </button>
+                            <button class="item-dropdown-item quantity" onclick="openQuantityModal('${categoryKey}', ${item.id}); closeAllMenus();">
+                                📊 Quantité
+                            </button>
+                            <button class="item-dropdown-item move" onclick="openMoveModal('${categoryKey}', ${item.id}); closeAllMenus();">
+                                📁 Déplacer
+                            </button>
+                            <button class="item-dropdown-item delete" onclick="deleteItem('${categoryKey}', ${item.id}); closeAllMenus();">
+                                🗑️ Supprimer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
         function renderCategories() {
             const container = document.getElementById('categoriesContainer');
             container.innerHTML = '';
 
             let hasVisibleItems = false;
 
-            Object.keys(CATEGORIES).forEach(categoryKey => {
-                const items = groceryList[categoryKey] || [];
-                const filteredItems = filterItems(items);
-
+            // Unsectioned items: keys in groceryList not in articleSections
+            const unsectionedKeys = Object.keys(groceryList).filter(key => !articleSections[key]);
+            unsectionedKeys.forEach(key => {
+                const filteredItems = filterItems(groceryList[key] || []);
                 if (filteredItems.length > 0) {
                     hasVisibleItems = true;
-                    const categoryDiv = document.createElement('div');
-                    categoryDiv.className = 'category';
-
-                    const category = CATEGORIES[categoryKey];
-                    const isCollapsed = collapsedCategories[categoryKey] || false;
-                    
-                    categoryDiv.innerHTML = `
-                        <div class="category-header ${isCollapsed ? 'collapsed' : ''}" onclick="toggleCategory('${categoryKey}')">
-                            <span class="category-icon">${category.icon}</span>
-                            <span class="category-title">${category.name}</span>
+                    const div = document.createElement('div');
+                    div.className = 'category';
+                    const isCollapsed = collapsedCategories[key] || false;
+                    div.innerHTML = `
+                        <div class="category-header ${isCollapsed ? 'collapsed' : ''}" data-section-id="${key}" onclick="toggleArticleSection('${key}')">
+                            <span class="category-icon">📦</span>
+                            <span class="category-title">${escapeHtml(key)}</span>
                             <span class="category-count">${filteredItems.length}</span>
                             <span class="category-chevron ${isCollapsed ? 'collapsed' : ''}">▼</span>
                         </div>
-                        <div class="items-list ${isCollapsed ? 'collapsed' : ''}" data-category="${categoryKey}">
-                            ${filteredItems.map(item => `
-                                <div class="item ${item.checked ? 'checked' : ''}" 
-                                     draggable="true" 
-                                     data-item-id="${item.id}"
-                                     data-category="${categoryKey}">
-                                    <span class="drag-handle">⋮⋮</span>
-                                    <input type="checkbox" class="item-checkbox" 
-                                           ${item.checked ? 'checked' : ''}
-                                           onchange="toggleItem('${categoryKey}', ${item.id})">
-                                    <span class="item-name">${escapeHtml(item.name)}</span>
-                                    ${item.quantity ? `<span class="quantity-badge" onclick="event.stopPropagation(); openQuantityModal('${categoryKey}', ${item.id})" title="Modifier la quantité">${item.quantity}</span>` : ''}
-                                    <div class="item-actions">
-                                        <button class="item-menu-btn" onclick="toggleItemMenu(event, '${categoryKey}', ${item.id})" title="Actions">
-                                            ⋮
-                                        </button>
-                                        <div class="item-dropdown" id="menu-${categoryKey}-${item.id}">
-                                            <button class="item-dropdown-item rename" onclick="openRenameModal('${categoryKey}', ${item.id}); closeAllMenus();">
-                                                ✏️ Renommer
-                                            </button>
-                                            <button class="item-dropdown-item quantity" onclick="openQuantityModal('${categoryKey}', ${item.id}); closeAllMenus();">
-                                                📊 Quantité
-                                            </button>
-                                            <button class="item-dropdown-item move" onclick="openMoveModal('${categoryKey}', ${item.id}); closeAllMenus();">
-                                                📁 Déplacer
-                                            </button>
-                                            <button class="item-dropdown-item delete" onclick="deleteItem('${categoryKey}', ${item.id}); closeAllMenus();">
-                                                🗑️ Supprimer
-                                            </button>
-                                        </div>
-                                    </div>
+                        <div class="items-list ${isCollapsed ? 'collapsed' : ''}" data-category="${key}">
+                            ${renderItemsHtml(filteredItems, key)}
+                        </div>
+                    `;
+                    container.appendChild(div);
+                }
+            });
+
+            // Sectioned items: iterate articleSectionOrder
+            articleSectionOrder.forEach(sectionKey => {
+                const section = articleSections[sectionKey];
+                if (!section) return;
+
+                const items = groceryList[sectionKey] || [];
+                const filteredItems = filterItems(items);
+
+                if (filteredItems.length > 0 || currentFilter === 'all') {
+                    hasVisibleItems = true;
+                    const categoryDiv = document.createElement('div');
+                    categoryDiv.className = 'category';
+                    categoryDiv.setAttribute('data-article-section-id', sectionKey);
+                    categoryDiv.setAttribute('draggable', 'true');
+
+                    const isCollapsed = collapsedCategories[sectionKey] || false;
+
+                    categoryDiv.innerHTML = `
+                        <div class="category-header ${isCollapsed ? 'collapsed' : ''}" data-section-id="${sectionKey}" onclick="toggleArticleSection('${sectionKey}')">
+                            <span class="drag-handle" style="cursor: grab; color: #adb5bd;" onmousedown="event.stopPropagation()">⋮⋮</span>
+                            <span class="category-icon">${escapeHtml(section.icon || '📁')}</span>
+                            <span class="category-title">${escapeHtml(section.name)}</span>
+                            <span class="category-count">${filteredItems.length}</span>
+                            <span class="category-chevron ${isCollapsed ? 'collapsed' : ''}">▼</span>
+                            <div class="meal-section-actions" onclick="event.stopPropagation()">
+                                <button class="item-menu-btn" onclick="toggleArticleSectionMenu(event, '${sectionKey}')" title="Actions">
+                                    ⋮
+                                </button>
+                                <div class="item-dropdown" id="article-section-menu-${sectionKey}">
+                                    <button class="item-dropdown-item rename" onclick="openRenameArticleSectionModal('${sectionKey}'); closeAllMenus();">
+                                        ✏️ Renommer
+                                    </button>
+                                    <button class="item-dropdown-item delete" onclick="deleteArticleSection('${sectionKey}'); closeAllMenus();">
+                                        🗑️ Supprimer la section
+                                    </button>
                                 </div>
-                            `).join('')}
+                            </div>
+                        </div>
+                        <div class="items-list ${isCollapsed ? 'collapsed' : ''}" data-category="${sectionKey}">
+                            ${filteredItems.length > 0
+                                ? renderItemsHtml(filteredItems, sectionKey)
+                                : '<div class="meals-empty" style="padding: 15px; font-size: 13px; color: #999;">Aucun article dans cette section</div>'
+                            }
                         </div>
                     `;
 
@@ -3677,6 +4035,7 @@
 
             updateStats();
             initializeDragAndDrop();
+            initializeArticleSectionDragAndDrop();
             updateCollapseAllButton();
         }
 
@@ -3684,7 +4043,7 @@
             const btn = document.getElementById('collapseAllBtn');
             if (!btn) return;
             
-            const visibleCategories = Object.keys(CATEGORIES).filter(key => {
+            const visibleCategories = articleSectionOrder.filter(key => {
                 const items = groceryList[key] || [];
                 return filterItems(items).length > 0;
             });
@@ -4003,7 +4362,7 @@
                 // Si on clique sur "À acheter", on déplie toutes les catégories
                 if (currentFilter === 'checked') {
                     // Déplier toutes les catégories
-                    Object.keys(CATEGORIES).forEach(categoryKey => {
+                    articleSectionOrder.forEach(categoryKey => {
                         collapsedCategories[categoryKey] = false;
                     });
                     saveToLocalStorage();
@@ -4224,6 +4583,8 @@
                         mealOrder: mealOrder,
                         mealSections: mealSections,
                         mealSectionOrder: mealSectionOrder,
+                        articleSections: articleSections,
+                        articleSectionOrder: articleSectionOrder,
                         collapsedCategories: collapsedCategories,
                         lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                     };
