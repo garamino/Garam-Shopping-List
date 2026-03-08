@@ -2093,6 +2093,7 @@
             firebase.initializeApp(firebaseConfig);
             db = firebase.firestore();
             auth = firebase.auth();
+            auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
             console.log('✅ Firebase initialisé');
         } catch (error) {
             console.error('❌ Erreur Firebase:', error);
