@@ -662,6 +662,34 @@
             background: #5568d3;
         }
 
+        .meals-controls {
+            padding: 0 20px 15px 20px;
+            background: #f8f9fa;
+        }
+
+        .meals-controls.collapsed {
+            display: none;
+        }
+
+        .meals-search-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .meals-search-box {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .meals-search-box:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
         .meals-list {
             display: flex;
             flex-direction: column;
@@ -1158,6 +1186,14 @@
                     <button class="add-meal-btn" onclick="event.stopPropagation(); openMealModal()">+ Nouveau plat</button>
                 </div>
             </div>
+            <div class="meals-controls" id="mealsControls">
+                <div class="meals-search-row">
+                    <input type="text" class="meals-search-box" id="mealsSearchBox" placeholder="🔍 Rechercher un plat...">
+                    <button class="collapse-all-btn" id="mealsCollapseAllBtn" onclick="toggleAllMealSections()" title="Replier/Déplier tout">
+                        ⬍
+                    </button>
+                </div>
+            </div>
             <div class="meals-list" id="mealsList"></div>
         </div>
 
@@ -1488,6 +1524,10 @@
             const div = document.createElement('div');
             div.textContent = String(str || '');
             return div.innerHTML;
+        }
+
+        function normalizeSearch(str) {
+            return String(str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9 ]/g, '').toLowerCase();
         }
 
         // ========================================
@@ -2097,6 +2137,7 @@
         let mealSections = {};           // { sectionId: { name: "Plats italiens" } }
         let mealSectionOrder = [];       // Ordre d'affichage des sections
         let collapsedMealSections = {};  // { sectionId: true/false }
+        let mealSearchTerm = '';
         let articleSections = {};        // { sectionId: { name, icon } }
         let articleSectionOrder = [];    // Ordre d'affichage des sections articles
         let mealsCollapsed = false;
@@ -2898,6 +2939,11 @@
             const container = document.getElementById('mealsList');
             const mealKeys = getOrderedMealKeys();
 
+            // Filter meals by search term
+            const filteredMealKeys = mealSearchTerm
+                ? mealKeys.filter(id => meals[id] && normalizeSearch(meals[id].name).includes(normalizeSearch(mealSearchTerm)))
+                : mealKeys;
+
             if (mealKeys.length === 0 && mealSectionOrder.length === 0) {
                 container.innerHTML = `
                     <div class="meals-empty">
@@ -2910,7 +2956,7 @@
             let html = '';
 
             // 1. Unsectioned meals (no sectionId or section deleted)
-            const unsectionedMeals = mealKeys.filter(id => {
+            const unsectionedMeals = filteredMealKeys.filter(id => {
                 const sectionId = meals[id].sectionId;
                 return !sectionId || !mealSections[sectionId];
             });
@@ -2929,7 +2975,9 @@
 
             validSectionOrder.forEach(sectionId => {
                 const section = mealSections[sectionId];
-                const sectionMeals = mealKeys.filter(id => meals[id].sectionId === sectionId);
+                const sectionMeals = filteredMealKeys.filter(id => meals[id].sectionId === sectionId);
+                // Hide section if searching and no meals match
+                if (mealSearchTerm && sectionMeals.length === 0) return;
                 const isCollapsed = collapsedMealSections[sectionId] || false;
 
                 html += `
@@ -2966,6 +3014,11 @@
                 `;
             });
 
+            // Show "no results" message when searching
+            if (mealSearchTerm && filteredMealKeys.length === 0) {
+                html += '<div class="meals-empty">Aucun plat trouvé pour "' + escapeHtml(mealSearchTerm) + '"</div>';
+            }
+
             container.innerHTML = html;
 
             // Apply collapsed state for overall meals section
@@ -2984,14 +3037,37 @@
         function updateMealsCollapseState() {
             const mealsList = document.getElementById('mealsList');
             const chevron = document.getElementById('mealsChevron');
-            
+            const mealsControls = document.getElementById('mealsControls');
+
             if (mealsCollapsed) {
                 mealsList.classList.add('collapsed');
                 if (chevron) chevron.classList.add('collapsed');
+                if (mealsControls) mealsControls.classList.add('collapsed');
             } else {
                 mealsList.classList.remove('collapsed');
                 if (chevron) chevron.classList.remove('collapsed');
+                if (mealsControls) mealsControls.classList.remove('collapsed');
             }
+        }
+
+        function toggleAllMealSections() {
+            const btn = document.getElementById('mealsCollapseAllBtn');
+            const allCollapsed = mealSectionOrder.length > 0 && mealSectionOrder.every(id => collapsedMealSections[id]);
+
+            mealSectionOrder.forEach(sectionId => {
+                collapsedMealSections[sectionId] = !allCollapsed;
+            });
+
+            if (!allCollapsed) {
+                btn.classList.add('collapsed');
+                btn.title = 'Déplier tout';
+            } else {
+                btn.classList.remove('collapsed');
+                btn.title = 'Replier tout';
+            }
+
+            saveToLocalStorage();
+            renderMeals();
         }
 
         // ========================================
@@ -3901,8 +3977,9 @@
 
             // Apply search filter
             if (searchTerm) {
-                filtered = filtered.filter(item => 
-                    item.name.toLowerCase().includes(searchTerm.toLowerCase())
+                const normalizedSearch = normalizeSearch(searchTerm);
+                filtered = filtered.filter(item =>
+                    normalizeSearch(item.name).includes(normalizedSearch)
                 );
             }
 
@@ -4351,6 +4428,11 @@
         document.getElementById('searchBox').addEventListener('input', (e) => {
             searchTerm = e.target.value;
             renderCategories();
+        });
+
+        document.getElementById('mealsSearchBox').addEventListener('input', (e) => {
+            mealSearchTerm = e.target.value;
+            renderMeals();
         });
 
         document.querySelectorAll('.filter-btn').forEach(btn => {
