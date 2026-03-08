@@ -635,6 +635,7 @@
             align-items: center;
             justify-content: space-between;
             margin-bottom: 15px;
+            gap: 8px;
         }
 
         .meals-title {
@@ -644,18 +645,21 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            white-space: nowrap;
         }
 
         .add-meal-btn {
-            padding: 10px 20px;
+            padding: 6px 12px;
             background: #667eea;
             color: white;
-            border: none;
-            border-radius: 10px;
+            border: 1.5px solid #667eea;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 600;
             transition: background 0.3s;
+            white-space: nowrap;
+            line-height: 1;
         }
 
         .add-meal-btn:hover {
@@ -782,15 +786,17 @@
         }
 
         .add-section-btn {
-            padding: 10px 16px;
+            padding: 6px 10px;
             background: white;
             color: #667eea;
-            border: 2px solid #667eea;
-            border-radius: 10px;
+            border: 1.5px solid #667eea;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
             transition: all 0.3s;
+            white-space: nowrap;
+            line-height: 1;
         }
 
         .add-section-btn:hover {
@@ -1179,9 +1185,9 @@
             <div class="meals-header" onclick="toggleMealsSection()" style="cursor: pointer; user-select: none;">
                 <div class="meals-title">
                     🍽️ Mes Plats
-                    <span class="category-chevron" id="mealsChevron" style="margin-left: 10px; font-size: 14px; transition: transform 0.3s;">▼</span>
                 </div>
-                <div class="meals-header-buttons">
+                <span class="category-chevron" id="mealsChevron" style="font-size: 12px; transition: transform 0.3s; color: #999;">▼</span>
+                <div class="meals-header-buttons" style="margin-left: auto;">
                     <button class="add-section-btn" onclick="event.stopPropagation(); openCreateSectionModal()" title="Nouvelle section">+ Section</button>
                     <button class="add-meal-btn" onclick="event.stopPropagation(); openMealModal()">+ Nouveau plat</button>
                 </div>
@@ -1198,12 +1204,12 @@
         </div>
 
         <div class="articles-section">
-            <div class="articles-header" onclick="toggleArticlesSection()" style="cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between; padding: 20px; background: #f8f9fa; border-bottom: 1px solid #e9ecef;">
-                <div class="articles-title" style="font-size: 18px; font-weight: 600; color: #333; display: flex; align-items: center; gap: 10px;">
+            <div class="articles-header" onclick="toggleArticlesSection()" style="cursor: pointer; user-select: none; display: flex; align-items: center; padding: 20px; background: #f8f9fa; border-bottom: 1px solid #e9ecef; gap: 8px;">
+                <div class="articles-title" style="font-size: 18px; font-weight: 600; color: #333; display: flex; align-items: center; gap: 10px; white-space: nowrap;">
                     📦 Mes Articles
-                    <span class="category-chevron" id="articlesChevron" style="margin-left: 10px; font-size: 14px; transition: transform 0.3s;">▼</span>
                 </div>
-                <div class="meals-header-buttons">
+                <span class="category-chevron" id="articlesChevron" style="font-size: 12px; transition: transform 0.3s; color: #999;">▼</span>
+                <div class="meals-header-buttons" style="margin-left: auto;">
                     <button class="add-section-btn" onclick="event.stopPropagation(); openCreateArticleSectionModal()" title="Nouvelle section">+ Section</button>
                     <button class="add-meal-btn" onclick="event.stopPropagation(); openAddArticleModal()">+ Nouvel article</button>
                 </div>
