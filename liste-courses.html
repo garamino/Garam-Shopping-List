@@ -2696,7 +2696,7 @@
             renderCategories();
         }
 
-        function openAddArticleModal() {
+        function openAddArticleModal(prefillName) {
             const modal = document.getElementById('addArticleModal');
             const nameInput = document.getElementById('modalArticleName');
             const categorySelect = document.getElementById('modalArticleCategory');
@@ -2711,12 +2711,16 @@
             });
             categorySelect.innerHTML = optionsHtml;
 
-            nameInput.value = '';
+            nameInput.value = prefillName || '';
             categorySelect.value = '';
             modal.classList.add('show');
 
             setTimeout(() => {
-                nameInput.focus();
+                if (prefillName) {
+                    categorySelect.focus();
+                } else {
+                    nameInput.focus();
+                }
             }, 100);
         }
 
@@ -4258,7 +4262,12 @@
             if (!hasVisibleItems) {
                 if (isSearching) {
                     container.innerHTML = `
-                        <div class="meals-empty">Aucun article trouvé pour "${escapeHtml(searchTerm)}"</div>
+                        <div class="meals-empty">
+                            Aucun article trouvé pour "${escapeHtml(searchTerm)}"
+                            <button onclick="openAddArticleModal('${escapeHtml(searchTerm).replace(/'/g, "\\'")}')" style="display:block; margin:12px auto 0; padding:10px 20px; background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); color:white; border:none; border-radius:8px; font-size:14px; cursor:pointer;">
+                                + Créer "${escapeHtml(searchTerm)}"
+                            </button>
+                        </div>
                     `;
                 } else {
                     container.innerHTML = `
