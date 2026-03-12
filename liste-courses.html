@@ -1640,6 +1640,7 @@
         let currentUser = null;
         let userId = null;
         let isFirebaseReady = false;
+        let dataLoaded = false; // Verrou anti-écrasement : bloque toute sauvegarde tant que les données n'ont pas été chargées
 
         // Partage de liste
         let activeListId = null;      // ID de la liste partagée active (null = liste perso)
@@ -2163,6 +2164,7 @@
                     localStorage.setItem('articleSectionOrder', JSON.stringify(articleSectionOrder));
                 }
                 ensureArticleSections();
+                dataLoaded = true;
 
                 renderCategories();
                 renderMeals();
@@ -2352,7 +2354,8 @@
                     
                     delete groceryList['viande-poisson'];
                 }
-                
+
+                dataLoaded = true;
                 saveToLocalStorage();
             } else {
                 // Add items from user's list
@@ -2505,14 +2508,17 @@
                         { name: 'Piles', checked: false, id: idCounter++ }
                     ]
                 };
+                dataLoaded = true;
                 saveToLocalStorage();
             }
+            dataLoaded = true;
             ensureArticleSections();
         }
 
         let saveTimeout = null; // Timer for debouncing
 
         function saveToLocalStorage() {
+            if (!dataLoaded) return; // Ne pas sauvegarder tant que les données n'ont pas été chargées
             // Save to localStorage (backup) - IMMEDIATE
             localStorage.setItem('groceryList', JSON.stringify(groceryList));
             localStorage.setItem('collapsedCategories', JSON.stringify(collapsedCategories));
@@ -2539,6 +2545,7 @@
         }
 
         async function saveToFirebase() {
+            if (!dataLoaded) return; // Ne pas sauvegarder tant que les données n'ont pas été chargées
             if (!isFirebaseReady || !db || !userId) {
                 console.log('Firebase non disponible, sauvegarde locale uniquement');
                 updateSyncStatus('offline');
@@ -2645,7 +2652,8 @@
                     localStorage.setItem('articleSections', JSON.stringify(articleSections));
                     localStorage.setItem('articleSectionOrder', JSON.stringify(articleSectionOrder));
                     localStorage.setItem('collapsedCategories', JSON.stringify(collapsedCategories));
-                    
+
+                    dataLoaded = true;
                     updateSyncStatus('synced');
                     return true;
                 } else {
@@ -4698,6 +4706,7 @@
                 activeListId = null;
                 userListMemberships = [];
                 isFirebaseReady = false;
+                dataLoaded = false;
                 document.getElementById('authModal').classList.add('show');
             }
         });
@@ -4808,6 +4817,7 @@
 
         // Force save to Firebase before closing the app/browser
         window.addEventListener('beforeunload', function(event) {
+            if (!dataLoaded) return; // Ne pas écraser Firebase avec des données vides
             if (saveTimeout) {
                 clearTimeout(saveTimeout);
                 if (isFirebaseReady && db && userId) {
