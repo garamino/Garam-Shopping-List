@@ -501,6 +501,31 @@
             border-color: #667eea;
         }
 
+        .password-wrapper {
+            position: relative;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .password-wrapper .auth-input {
+            margin-bottom: 0;
+            padding-right: 45px;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            color: #999;
+            padding: 4px;
+            line-height: 1;
+        }
+
         .auth-button {
             width: 100%;
             padding: 15px;
@@ -1420,7 +1445,10 @@
         <div class="auth-modal-content">
             <div class="auth-modal-header">🔐 Connexion</div>
             <input type="email" class="auth-input" id="loginEmailInput" placeholder="Votre email" autocomplete="email">
-            <input type="password" class="auth-input" id="loginPasswordInput" placeholder="Votre mot de passe" autocomplete="current-password">
+            <div class="password-wrapper">
+                <input type="password" class="auth-input" id="loginPasswordInput" placeholder="Votre mot de passe" autocomplete="current-password">
+                <button type="button" class="password-toggle" onclick="togglePasswordVisibility(this)" aria-label="Afficher le mot de passe">👁️</button>
+            </div>
             <p id="loginError" style="color:#dc3545;font-size:13px;display:none;margin-top:-8px;text-align:left;"></p>
             <button class="auth-button" onclick="loginWithEmail()">Se connecter</button>
             <div class="auth-divider">ou</div>
@@ -1435,8 +1463,14 @@
         <div class="auth-modal-content">
             <div class="auth-modal-header">✨ Nouveau compte</div>
             <input type="email" class="auth-input" id="newEmailInput" placeholder="Votre email" autocomplete="email">
-            <input type="password" class="auth-input" id="newPasswordInput" placeholder="Mot de passe (min. 6 car.)" autocomplete="new-password">
-            <input type="password" class="auth-input" id="confirmPasswordInput" placeholder="Confirmer le mot de passe" autocomplete="new-password">
+            <div class="password-wrapper">
+                <input type="password" class="auth-input" id="newPasswordInput" placeholder="Mot de passe (min. 6 car.)" autocomplete="new-password">
+                <button type="button" class="password-toggle" onclick="togglePasswordVisibility(this)" aria-label="Afficher le mot de passe">👁️</button>
+            </div>
+            <div class="password-wrapper">
+                <input type="password" class="auth-input" id="confirmPasswordInput" placeholder="Confirmer le mot de passe" autocomplete="new-password">
+                <button type="button" class="password-toggle" onclick="togglePasswordVisibility(this)" aria-label="Afficher le mot de passe">👁️</button>
+            </div>
             <p id="registerError" style="color:#dc3545;font-size:13px;display:none;margin-top:-8px;text-align:left;"></p>
             <button class="auth-button" onclick="registerWithEmail()">Créer mon compte</button>
             <div class="auth-divider">ou</div>
@@ -1589,6 +1623,17 @@
             hideAuthErrors();
             document.getElementById('createAccountModal').classList.remove('show');
             document.getElementById('authModal').classList.add('show');
+        }
+
+        function togglePasswordVisibility(btn) {
+            const input = btn.previousElementSibling;
+            if (input.type === 'password') {
+                input.type = 'text';
+                btn.textContent = '🙈';
+            } else {
+                input.type = 'password';
+                btn.textContent = '👁️';
+            }
         }
 
         async function loginWithEmail() {
@@ -2985,7 +3030,8 @@
                 const sectionMeals = filteredMealKeys.filter(id => meals[id].sectionId === sectionId);
                 // Hide section if searching and no meals match
                 if (mealSearchTerm && sectionMeals.length === 0) return;
-                const isCollapsed = collapsedMealSections[sectionId] || false;
+                // When searching: expand sections with results
+                const isCollapsed = mealSearchTerm ? false : (collapsedMealSections[sectionId] || false);
 
                 html += `
                     <div class="meal-section" data-section-id="${sectionId}" draggable="true">
@@ -4033,6 +4079,7 @@
             container.innerHTML = '';
 
             let hasVisibleItems = false;
+            const isSearching = !!searchTerm;
 
             // Unsectioned items: keys in groceryList not in articleSections
             const unsectionedKeys = Object.keys(groceryList).filter(key => !articleSections[key]);
@@ -4042,7 +4089,7 @@
                     hasVisibleItems = true;
                     const div = document.createElement('div');
                     div.className = 'category';
-                    const isCollapsed = collapsedCategories[key] || false;
+                    const isCollapsed = isSearching ? false : (collapsedCategories[key] || false);
                     div.innerHTML = `
                         <div class="category-header ${isCollapsed ? 'collapsed' : ''}" data-section-id="${key}" onclick="toggleArticleSection('${key}')">
                             <span class="category-icon">📦</span>
@@ -4065,15 +4112,17 @@
 
                 const items = groceryList[sectionKey] || [];
                 const filteredItems = filterItems(items);
+                const hasResults = filteredItems.length > 0;
 
-                if (filteredItems.length > 0 || currentFilter === 'all') {
-                    hasVisibleItems = true;
+                if (hasResults || (!isSearching && currentFilter === 'all')) {
+                    if (hasResults) hasVisibleItems = true;
                     const categoryDiv = document.createElement('div');
                     categoryDiv.className = 'category';
                     categoryDiv.setAttribute('data-article-section-id', sectionKey);
                     categoryDiv.setAttribute('draggable', 'true');
 
-                    const isCollapsed = collapsedCategories[sectionKey] || false;
+                    // When searching: expand sections with results, collapse those without
+                    const isCollapsed = isSearching ? !hasResults : (collapsedCategories[sectionKey] || false);
 
                     categoryDiv.innerHTML = `
                         <div class="category-header ${isCollapsed ? 'collapsed' : ''}" data-section-id="${sectionKey}" onclick="toggleArticleSection('${sectionKey}')">
@@ -4109,12 +4158,18 @@
             });
 
             if (!hasVisibleItems) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">🛒</div>
-                        <p>Aucun article dans votre liste</p>
-                    </div>
-                `;
+                if (isSearching) {
+                    container.innerHTML = `
+                        <div class="meals-empty">Aucun article trouvé pour "${escapeHtml(searchTerm)}"</div>
+                    `;
+                } else {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🛒</div>
+                            <p>Aucun article dans votre liste</p>
+                        </div>
+                    `;
+                }
             }
 
             updateStats();
