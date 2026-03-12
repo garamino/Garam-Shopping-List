@@ -797,6 +797,46 @@
             color: #6c757d;
         }
 
+        .meal-recipe-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 4px 6px;
+            border-radius: 6px;
+            opacity: 0.35;
+            transition: opacity 0.2s, transform 0.2s;
+            flex-shrink: 0;
+        }
+
+        .meal-recipe-btn:hover {
+            opacity: 0.7;
+            transform: scale(1.15);
+        }
+
+        .meal-recipe-btn.has-recipe {
+            opacity: 0.85;
+        }
+
+        .recipe-textarea {
+            width: 100%;
+            min-height: 250px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 14px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: vertical;
+            outline: none;
+            transition: border-color 0.3s;
+            box-sizing: border-box;
+            line-height: 1.6;
+        }
+
+        .recipe-textarea:focus {
+            border-color: #667eea;
+        }
+
         .meals-empty {
             text-align: center;
             padding: 30px;
@@ -1423,6 +1463,18 @@
             <div class="modal-buttons">
                 <button class="modal-confirm" id="articleSectionConfirmBtn" onclick="confirmCreateArticleSection()">Créer</button>
                 <button class="modal-cancel" onclick="closeArticleSectionModal()">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recipe Modal -->
+    <div id="recipeModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header" id="recipeModalHeader">📖 Recette</div>
+            <textarea class="recipe-textarea" id="recipeTextarea" placeholder="Écrivez votre recette ici..."></textarea>
+            <div class="modal-buttons">
+                <button class="modal-confirm" onclick="saveRecipe()">Sauvegarder</button>
+                <button class="modal-cancel" onclick="closeRecipeModal()">Annuler</button>
             </div>
         </div>
     </div>
@@ -2949,6 +3001,7 @@
                         <div class="meal-name">${escapeHtml(meal.name)}</div>
                         <div class="meal-ingredients">${ingredientNames}${moreText}</div>
                     </div>
+                    <button class="meal-recipe-btn ${meal.recipe ? 'has-recipe' : ''}" onclick="openRecipeModal('${mealId}')" title="${meal.recipe ? 'Voir la recette' : 'Ajouter une recette'}">📖</button>
                     <div class="item-actions">
                         <button class="item-menu-btn" onclick="toggleMealMenu(event, '${mealId}')" title="Actions">
                             ⋮
@@ -3852,6 +3905,43 @@
             
             closeRenameModal();
             currentRenameMeal = null;
+        }
+
+        // Recipe modal
+        let currentRecipeMealId = null;
+
+        function openRecipeModal(mealId) {
+            currentRecipeMealId = mealId;
+            const meal = meals[mealId];
+            if (!meal) return;
+
+            const modal = document.getElementById('recipeModal');
+            const textarea = document.getElementById('recipeTextarea');
+            const header = document.getElementById('recipeModalHeader');
+
+            header.textContent = '📖 ' + meal.name;
+            textarea.value = meal.recipe || '';
+            modal.classList.add('show');
+
+            setTimeout(() => textarea.focus(), 100);
+        }
+
+        function saveRecipe() {
+            if (currentRecipeMealId === null) return;
+            const meal = meals[currentRecipeMealId];
+            if (!meal) return;
+
+            const text = document.getElementById('recipeTextarea').value.trim();
+            meal.recipe = text;
+
+            saveToLocalStorage();
+            renderMeals();
+            closeRecipeModal();
+        }
+
+        function closeRecipeModal() {
+            document.getElementById('recipeModal').classList.remove('show');
+            currentRecipeMealId = null;
         }
 
         // Edit meal ingredients
