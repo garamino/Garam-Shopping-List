@@ -1261,6 +1261,7 @@
             <div style="display: flex; justify-content: center; margin-bottom: 15px;">
                 <img src="header-logo.png" alt="Ma Liste de Courses" style="width: 120px; height: 120px; object-fit: contain;">
             </div>
+            <div id="activeListName" style="text-align: center; font-size: 13px; font-weight: 600; color: #ffffff; margin-bottom: 4px; display: none;"></div>
             <div style="display: flex; justify-content: center; align-items: center; gap: 15px;">
                 <span class="update-status" onclick="checkForUpdates()" title="Vérifier les mises à jour">
                     <span class="update-status-icon" id="updateStatusIcon">✅</span>
@@ -1827,6 +1828,31 @@
             return code;
         }
 
+        function updateActiveListLabel() {
+            const el = document.getElementById('activeListName');
+            if (!el) return;
+            if (activeListId) {
+                // Liste partagée → récupérer le nom depuis Firestore
+                db.collection('lists').doc(activeListId).get().then(doc => {
+                    if (doc.exists && doc.data().name) {
+                        el.textContent = '📋 ' + doc.data().name;
+                    } else {
+                        el.textContent = '📋 Liste partagée';
+                    }
+                    el.style.display = 'block';
+                }).catch(() => {
+                    el.textContent = '📋 Liste partagée';
+                    el.style.display = 'block';
+                });
+            } else if (currentUser) {
+                const userName = currentUser.displayName || currentUser.email || 'utilisateur';
+                el.textContent = '📋 Liste perso de ' + userName;
+                el.style.display = 'block';
+            } else {
+                el.style.display = 'none';
+            }
+        }
+
         function updateShareUI() {
             const sharedSection = document.getElementById('sharedListSection');
             const personalSection = document.getElementById('personalListSection');
@@ -1951,6 +1977,7 @@
                     subscribeToSharedList(activeListId);
                     startPresenceHeartbeat();
                     updateShareUI();
+                    updateActiveListLabel();
                     document.getElementById('joinCodeInput').value = '';
                     closeSettingsModal();
                     return;
@@ -1974,6 +2001,7 @@
                 subscribeToSharedList(activeListId);
                 startPresenceHeartbeat();
                 updateShareUI();
+                updateActiveListLabel();
                 closeSettingsModal();
             } catch (e) {
                 console.error('Erreur joinSharedList:', e);
@@ -2007,6 +2035,7 @@
             renderCategories();
             renderMeals();
             updateShareUI();
+            updateActiveListLabel();
         }
 
         async function showShareCode() {
@@ -2129,6 +2158,7 @@
             renderMeals();
             updateArticlesCollapseState();
             updateShareUI();
+            updateActiveListLabel();
         }
 
         // Présence
@@ -2230,8 +2260,15 @@
         async function checkListMembership(listId) {
             try {
                 const doc = await db.collection('lists').doc(listId).get();
-                return doc.exists && (doc.data().members || []).includes(userId);
-            } catch { return false; }
+                const isMember = doc.exists && (doc.data().members || []).includes(userId);
+                console.log(`🔍 checkListMembership(${listId}): ${isMember ? 'membre' : 'pas membre'}`);
+                return isMember;
+            } catch (e) {
+                // Erreur réseau → on considère valide plutôt que de tomber sur la liste perso
+                // L'onSnapshot vérifiera les permissions de toute façon
+                console.warn('⚠️ checkListMembership erreur réseau, on suppose membre:', e);
+                return true;
+            }
         }
 
         // Initialize Firebase when the page loads
@@ -4752,6 +4789,7 @@
                 }
 
                 // Décider quelle liste ouvrir
+                console.log(`📋 Préférences: defaultListId=${defaultListId}, memberships=[${userListMemberships.join(',')}]`);
                 if (defaultListId) {
                     // Liste par défaut configurée → vérifier qu'elle est valide
                     const valid = await checkListMembership(defaultListId);
@@ -4767,6 +4805,7 @@
                     await showListPicker();
                     return; // showListPicker → selectList → continue l'init
                 }
+                console.log(`📋 Liste active: ${activeListId || 'liste personnelle'}`);
 
                 if (activeListId) {
                     subscribeToSharedList(activeListId);
@@ -4788,6 +4827,7 @@
                 renderMeals();
                 updateArticlesCollapseState();
                 updateShareUI();
+                updateActiveListLabel();
             } else {
                 // Flush pending save BEFORE resetting state
                 if (saveTimeout && dataLoaded && isFirebaseReady && db && userId) {
@@ -4820,6 +4860,8 @@
                 userListMemberships = [];
                 isFirebaseReady = false;
                 dataLoaded = false;
+                const listLabel = document.getElementById('activeListName');
+                if (listLabel) listLabel.style.display = 'none';
                 document.getElementById('authModal').classList.add('show');
             }
         });
