@@ -2582,9 +2582,12 @@
         }
 
         async function saveToFirebase() {
-            if (!dataLoaded) return; // Ne pas sauvegarder tant que les données n'ont pas été chargées
+            if (!dataLoaded) {
+                console.warn('⚠️ saveToFirebase bloqué: dataLoaded=false');
+                return;
+            }
             if (!isFirebaseReady || !db || !userId) {
-                console.log('Firebase non disponible, sauvegarde locale uniquement');
+                console.warn('⚠️ saveToFirebase bloqué: isFirebaseReady=' + isFirebaseReady + ', db=' + !!db + ', userId=' + !!userId);
                 updateSyncStatus('offline');
                 return;
             }
@@ -4761,6 +4764,14 @@
                     startPresenceHeartbeat();
                 } else {
                     await initializeDefaultItems();
+                    // Réconciliation: si localStorage avait des données non sync, forcer une sauvegarde
+                    if (dataLoaded && isFirebaseReady) {
+                        const mealCount = Object.keys(meals).length;
+                        if (mealCount > 0) {
+                            console.log(`🔄 Réconciliation: ${mealCount} plat(s) trouvé(s), sauvegarde forcée vers Firebase`);
+                            await saveToFirebase();
+                        }
+                    }
                 }
 
                 renderCategories();
@@ -4768,6 +4779,29 @@
                 updateArticlesCollapseState();
                 updateShareUI();
             } else {
+                // Flush pending save BEFORE resetting state
+                if (saveTimeout && dataLoaded && isFirebaseReady && db && userId) {
+                    clearTimeout(saveTimeout);
+                    const dataToSave = {
+                        groceryList: groceryList,
+                        meals: meals,
+                        mealOrder: mealOrder,
+                        mealSections: mealSections,
+                        mealSectionOrder: mealSectionOrder,
+                        articleSections: articleSections,
+                        articleSectionOrder: articleSectionOrder,
+                        collapsedCategories: collapsedCategories,
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+                    if (activeListId) {
+                        dataToSave[`presence.${userId}.lastSeen`] = new Date(0);
+                        db.collection('lists').doc(activeListId).set(dataToSave, { merge: true });
+                    } else {
+                        db.collection('users').doc(userId).set(dataToSave, { merge: true });
+                    }
+                    saveTimeout = null;
+                    console.log('💾 Sauvegarde forcée avant déconnexion auth');
+                }
                 stopPresenceHeartbeat();
                 if (listUnsubscribe) { listUnsubscribe(); listUnsubscribe = null; }
                 currentUser = null;
@@ -4914,6 +4948,34 @@
                 db.collection('lists').doc(activeListId).update({
                     [`presence.${userId}.lastSeen`]: new Date(0)
                 });
+            }
+        });
+
+        // Force save when app goes to background (mobile-friendly, beforeunload is unreliable on mobile)
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'hidden' && dataLoaded && saveTimeout) {
+                clearTimeout(saveTimeout);
+                if (isFirebaseReady && db && userId) {
+                    const dataToSave = {
+                        groceryList: groceryList,
+                        meals: meals,
+                        mealOrder: mealOrder,
+                        mealSections: mealSections,
+                        mealSectionOrder: mealSectionOrder,
+                        articleSections: articleSections,
+                        articleSectionOrder: articleSectionOrder,
+                        collapsedCategories: collapsedCategories,
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+                    if (activeListId) {
+                        dataToSave[`presence.${userId}.lastSeen`] = new Date(0);
+                        db.collection('lists').doc(activeListId).set(dataToSave, { merge: true });
+                    } else {
+                        db.collection('users').doc(userId).set(dataToSave, { merge: true });
+                    }
+                    saveTimeout = null;
+                    console.log('💾 Sauvegarde forcée (app en arrière-plan)');
+                }
             }
         });
 
