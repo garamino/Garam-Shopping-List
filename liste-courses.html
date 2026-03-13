@@ -1923,7 +1923,6 @@
                 mealSectionOrder: mealSectionOrder,
                 articleSections: articleSections,
                 articleSectionOrder: articleSectionOrder,
-                collapsedCategories: collapsedCategories,
                 members: [userId],
                 memberEmails: { [userId]: email },
                 ownerId: userId,
@@ -2601,20 +2600,24 @@
 
         let saveTimeout = null; // Timer for debouncing
 
+        // Sauvegarde locale uniquement (état d'affichage — pas de sync Firebase)
+        function saveCollapseState() {
+            localStorage.setItem('collapsedCategories', JSON.stringify(collapsedCategories));
+            localStorage.setItem('collapsedMealSections', JSON.stringify(collapsedMealSections));
+            localStorage.setItem('mealsCollapsed', mealsCollapsed.toString());
+            localStorage.setItem('articlesCollapsed', articlesCollapsed.toString());
+        }
+
         function saveToLocalStorage() {
             if (!dataLoaded) return; // Ne pas sauvegarder tant que les données n'ont pas été chargées
             // Save to localStorage (backup) - IMMEDIATE
             localStorage.setItem('groceryList', JSON.stringify(groceryList));
-            localStorage.setItem('collapsedCategories', JSON.stringify(collapsedCategories));
             localStorage.setItem('meals', JSON.stringify(meals));
             localStorage.setItem('mealOrder', JSON.stringify(mealOrder));
             localStorage.setItem('mealSections', JSON.stringify(mealSections));
             localStorage.setItem('mealSectionOrder', JSON.stringify(mealSectionOrder));
-            localStorage.setItem('collapsedMealSections', JSON.stringify(collapsedMealSections));
             localStorage.setItem('articleSections', JSON.stringify(articleSections));
             localStorage.setItem('articleSectionOrder', JSON.stringify(articleSectionOrder));
-            localStorage.setItem('mealsCollapsed', mealsCollapsed.toString());
-            localStorage.setItem('articlesCollapsed', articlesCollapsed.toString());
             
             // Show "pending" status immediately
             updateSyncStatus('pending');
@@ -2650,7 +2653,6 @@
                     mealSectionOrder: mealSectionOrder,
                     articleSections: articleSections,
                     articleSectionOrder: articleSectionOrder,
-                    collapsedCategories: collapsedCategories,
                     lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                 };
 
@@ -2727,7 +2729,6 @@
                     if (data.mealSectionOrder) mealSectionOrder = data.mealSectionOrder;
                     if (data.articleSections) articleSections = data.articleSections;
                     if (data.articleSectionOrder) articleSectionOrder = data.articleSectionOrder;
-                    if (data.collapsedCategories) collapsedCategories = data.collapsedCategories;
                     ensureArticleSections();
 
                     // Save to localStorage as backup
@@ -2738,7 +2739,6 @@
                     localStorage.setItem('mealSectionOrder', JSON.stringify(mealSectionOrder));
                     localStorage.setItem('articleSections', JSON.stringify(articleSections));
                     localStorage.setItem('articleSectionOrder', JSON.stringify(articleSectionOrder));
-                    localStorage.setItem('collapsedCategories', JSON.stringify(collapsedCategories));
 
                     dataLoaded = true;
                     updateSyncStatus('synced');
@@ -2778,8 +2778,8 @@
                 btn.textContent = '⬍';
                 btn.title = 'Replier tout';
             }
-            
-            saveToLocalStorage();
+
+            saveCollapseState();
             renderCategories();
         }
 
@@ -3235,7 +3235,7 @@
 
         function toggleMealsSection() {
             mealsCollapsed = !mealsCollapsed;
-            saveToLocalStorage();
+            saveCollapseState();
             updateMealsCollapseState();
         }
 
@@ -3271,7 +3271,7 @@
                 btn.title = 'Replier tout';
             }
 
-            saveToLocalStorage();
+            saveCollapseState();
             renderMeals();
         }
 
@@ -3392,6 +3392,7 @@
                 delete mealSections[sectionId];
                 mealSectionOrder = mealSectionOrder.filter(id => id !== sectionId);
                 delete collapsedMealSections[sectionId];
+                saveCollapseState();
                 saveToLocalStorage();
                 renderMeals();
             }
@@ -3399,7 +3400,7 @@
 
         function toggleMealSection(sectionId) {
             collapsedMealSections[sectionId] = !collapsedMealSections[sectionId];
-            saveToLocalStorage();
+            saveCollapseState();
 
             const header = document.querySelector(`.meal-section-header[data-section-id="${sectionId}"]`);
             if (header) {
@@ -3611,6 +3612,7 @@
                 delete articleSections[sectionId];
                 articleSectionOrder = articleSectionOrder.filter(id => id !== sectionId);
                 delete collapsedCategories[sectionId];
+                saveCollapseState();
                 saveToLocalStorage();
                 renderCategories();
             }
@@ -3618,7 +3620,7 @@
 
         function toggleArticleSection(sectionKey) {
             collapsedCategories[sectionKey] = !collapsedCategories[sectionKey];
-            saveToLocalStorage();
+            saveCollapseState();
 
             const header = document.querySelector(`.category-header[data-section-id="${sectionKey}"]`);
             if (header) {
@@ -3743,7 +3745,7 @@
 
         function toggleArticlesSection() {
             articlesCollapsed = !articlesCollapsed;
-            saveToLocalStorage();
+            saveCollapseState();
             updateArticlesCollapseState();
         }
 
@@ -4751,7 +4753,6 @@
                     meals: savedMeals ? JSON.parse(savedMeals) : {},
                     mealSections: {},
                     mealSectionOrder: [],
-                    collapsedCategories: {},
                     lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                 };
                 await db.collection('users').doc(userId).set(dataToMigrate);
@@ -4840,8 +4841,7 @@
                         mealSectionOrder: mealSectionOrder,
                         articleSections: articleSections,
                         articleSectionOrder: articleSectionOrder,
-                        collapsedCategories: collapsedCategories,
-                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                     };
                     if (activeListId) {
                         dataToSave[`presence.${userId}.lastSeen`] = new Date(0);
@@ -4984,8 +4984,7 @@
                         mealSectionOrder: mealSectionOrder,
                         articleSections: articleSections,
                         articleSectionOrder: articleSectionOrder,
-                        collapsedCategories: collapsedCategories,
-                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                     };
                     if (activeListId) {
                         dataToSave[`presence.${userId}.lastSeen`] = new Date(0);
@@ -5016,8 +5015,7 @@
                         mealSectionOrder: mealSectionOrder,
                         articleSections: articleSections,
                         articleSectionOrder: articleSectionOrder,
-                        collapsedCategories: collapsedCategories,
-                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                     };
                     if (activeListId) {
                         dataToSave[`presence.${userId}.lastSeen`] = new Date(0);
