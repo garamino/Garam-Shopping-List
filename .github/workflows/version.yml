@@ -1,0 +1,48 @@
+name: 🔢 Auto-increment Version
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  bump-version:
+    # Ne pas exécuter sur les commits automatiques de version
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: 📥 Checkout du code
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🔢 Incrémenter la version
+        run: |
+          # Lire la version actuelle
+          CURRENT=$(cat version.json | python3 -c "import sys,json; print(json.load(sys.stdin)['version'])")
+          echo "Version actuelle: $CURRENT"
+
+          # Incrémenter le patch (2.0.0 → 2.0.1)
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+          PATCH=$((PATCH + 1))
+          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+          echo "Nouvelle version: $NEW_VERSION"
+
+          # Mettre à jour version.json
+          echo "{\"version\": \"$NEW_VERSION\"}" > version.json
+
+          # Mettre à jour le CACHE_NAME dans service-worker.js
+          sed -i "s/const CACHE_NAME = 'liste-courses-v[^']*'/const CACHE_NAME = 'liste-courses-v$NEW_VERSION'/" service-worker.js
+
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+
+      - name: 📤 Commit et push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add version.json service-worker.js
+          git commit -m "v${{ env.NEW_VERSION }} [skip ci]"
+          git push

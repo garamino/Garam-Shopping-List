@@ -1633,6 +1633,7 @@
                     </a>
                 </div>
             </div>
+            <p id="appVersion" style="text-align:center; color:#adb5bd; font-size:12px; margin:0 0 12px 0;">Version ...</p>
             <button class="modal-confirm" onclick="logout()" style="background: #dc3545; width: 100%; margin-bottom: 10px;">
                 🚪 Se déconnecter
             </button>
@@ -1799,6 +1800,15 @@
             const testPageLink = document.getElementById('testPageLink');
             testPageLink.style.display = currentUser ? 'block' : 'none';
             updateShareUI();
+            // Charger la version
+            fetch('version.json?' + Date.now())
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('appVersion').textContent = 'Version ' + data.version;
+                })
+                .catch(() => {
+                    document.getElementById('appVersion').textContent = '';
+                });
             document.getElementById('settingsModal').classList.add('show');
         }
 
