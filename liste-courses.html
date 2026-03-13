@@ -2625,7 +2625,7 @@
             // Wait 5 seconds before saving to Firebase
             saveTimeout = setTimeout(() => {
                 saveToFirebase();
-            }, 5000); // 5 seconds debouncing
+            }, 1000); // 1 second debouncing
         }
 
         async function saveToFirebase() {
