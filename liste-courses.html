@@ -1615,6 +1615,9 @@
 
                 <!-- Section créer/rejoindre (liste personnelle) -->
                 <div id="personalListSection" style="margin-bottom:12px;">
+                    <button id="switchToSharedBtn" onclick="switchList()" style="display:none; width:100%; margin-bottom:8px; padding:10px; background:#667eea; color:white; border:none; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600;">
+                        🔄 Revenir à une liste partagée
+                    </button>
                     <button onclick="createSharedList()" class="modal-confirm" style="width:100%; margin-bottom:8px;">
                         🔗 Créer une liste partagée
                     </button>
@@ -1872,6 +1875,11 @@
                 sharedSection.style.display = 'none';
                 personalSection.style.display = 'block';
                 document.getElementById('shareCodeSection').style.display = 'none';
+                // Afficher le bouton "Revenir à une liste partagée" si l'utilisateur en a
+                const switchBtn = document.getElementById('switchToSharedBtn');
+                if (switchBtn) {
+                    switchBtn.style.display = userListMemberships.length > 0 ? 'block' : 'none';
+                }
             }
         }
 
