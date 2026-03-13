@@ -2069,8 +2069,11 @@
             alert('✅ Cette liste s\'ouvrira par défaut à la prochaine connexion.');
         }
 
+        let previousListId = null; // Pour restaurer en cas d'annulation
+
         async function switchList() {
             closeSettingsModal();
+            previousListId = activeListId;
             if (listUnsubscribe) { listUnsubscribe(); listUnsubscribe = null; }
             stopPresenceHeartbeat();
             activeListId = null;
@@ -2118,22 +2121,33 @@
 
         function closeListPicker() {
             document.getElementById('listPickerModal').classList.remove('show');
-            // Si aucune liste n'est encore active (ex: appel depuis onAuthStateChanged),
-            // revenir à la liste personnelle pour que l'app s'initialise correctement
-            if (!activeListId) {
+            if (!activeListId && previousListId) {
+                // Annulation depuis switchList → restaurer la liste précédente
+                activeListId = previousListId;
+                previousListId = null;
+                subscribeToSharedList(activeListId);
+                updatePresence(true);
+                startPresenceHeartbeat();
+                renderCategories();
+                renderMeals();
+                updateShareUI();
+                updateActiveListLabel();
+            } else if (!activeListId) {
+                // Pas de liste active (ex: premier login) → liste personnelle
                 initializeDefaultItems().then(() => {
                     renderCategories();
                     renderMeals();
                     updateArticlesCollapseState();
                     updateShareUI();
+                    updateActiveListLabel();
                 });
             }
-            // Si une liste est déjà active (ex: appel depuis switchList),
-            // on ne change rien et on reste sur la liste courante
+            previousListId = null;
         }
 
         async function selectList(listId) {
             document.getElementById('listPickerModal').classList.remove('show');
+            previousListId = null;
             activeListId = listId || null;
 
             if (activeListId) {
