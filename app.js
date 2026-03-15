@@ -7,9 +7,25 @@ import 'firebase/compat/auth';
 import { App as CapApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
+import { StatusBar, Style } from '@capacitor/status-bar';
 
 // Import CSS (Vite injecte le style)
 import './style.css';
+
+// Capacitor : configurer la barre de statut sur Android
+if (Capacitor.isNativePlatform()) {
+    document.body.classList.add('native-app');
+    StatusBar.setStyle({ style: Style.Light });
+    StatusBar.setBackgroundColor({ color: '#667eea' });
+    // Récupérer la vraie hauteur de la barre de statut
+    StatusBar.getInfo().then(info => {
+        const height = info.height || 0;
+        document.documentElement.style.setProperty('--status-bar-height', height + 'px');
+    }).catch(() => {
+        // Fallback si getInfo n'est pas supporté
+        document.documentElement.style.setProperty('--status-bar-height', '24px');
+    });
+}
 
 // Capacitor : sauvegarde quand l'app passe en arrière-plan (Android)
 CapApp.addListener('appStateChange', ({ isActive }) => {
