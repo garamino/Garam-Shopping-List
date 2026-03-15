@@ -1,5 +1,12 @@
 {
   "appId": "com.garamino.listecourses",
   "appName": "Ma Liste de Courses",
-  "webDir": "dist"
+  "webDir": "dist",
+  "plugins": {
+    "FirebaseAuthentication": {
+      "skipNativeAuth": false,
+      "providers": ["google.com"],
+      "googleServerClientId": "426451396001-bvgpfror0auma7cst3utkelav970b6gv.apps.googleusercontent.com"
+    }
+  }
 }

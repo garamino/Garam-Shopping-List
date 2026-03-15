@@ -5,6 +5,8 @@ import 'firebase/compat/auth';
 
 // Capacitor plugins
 import { App as CapApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
+import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 
 // Import CSS (Vite injecte le style)
 import './style.css';
@@ -151,7 +153,15 @@ CapApp.addListener('appStateChange', ({ isActive }) => {
         async function loginWithGoogle() {
             hideAuthErrors();
             try {
-                await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+                if (Capacitor.isNativePlatform()) {
+                    // Android natif : utilise le plugin Capacitor
+                    const result = await FirebaseAuthentication.signInWithGoogle();
+                    const credential = firebase.auth.GoogleAuthProvider.credential(result.credential?.idToken);
+                    await auth.signInWithCredential(credential);
+                } else {
+                    // Web : utilise le popup classique
+                    await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+                }
             } catch (e) {
                 if (e.code !== 'auth/popup-closed-by-user') {
                     showAuthError('loginError', 'Erreur Google Sign-In. Réessayez.');

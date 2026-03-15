@@ -23,6 +23,7 @@
   },
   "homepage": "https://github.com/garamino/Garam-Shopping-List#readme",
   "dependencies": {
+    "@capacitor-firebase/authentication": "^8.1.0",
     "@capacitor/app": "^8.0.1",
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.1",
