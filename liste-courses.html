@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://www.googleapis.com https://*.firebaseio.com https://securetoken.googleapis.com; frame-src https://accounts.google.com https://*.firebaseapp.com;">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ma Liste de Courses</title>
     
@@ -1969,6 +1970,19 @@
         }
 
         async function joinSharedList() {
+            // Rate limiting : max 5 tentatives par minute
+            const now = Date.now();
+            if (now - joinFirstAttemptTime > JOIN_WINDOW_MS) {
+                joinAttempts = 0;
+                joinFirstAttemptTime = now;
+            }
+            joinAttempts++;
+            if (joinAttempts > JOIN_MAX_ATTEMPTS) {
+                const secondsLeft = Math.ceil((JOIN_WINDOW_MS - (now - joinFirstAttemptTime)) / 1000);
+                alert(`Trop de tentatives. Réessayez dans ${secondsLeft} secondes.`);
+                return;
+            }
+
             const code = (document.getElementById('joinCodeInput').value || '').trim().toUpperCase();
             if (!code || code.length !== 6) { alert('Entrez un code de 6 caractères.'); return; }
 
@@ -2285,10 +2299,9 @@
                 console.log(`🔍 checkListMembership(${listId}): ${isMember ? 'membre' : 'pas membre'}`);
                 return isMember;
             } catch (e) {
-                // Erreur réseau → on considère valide plutôt que de tomber sur la liste perso
-                // L'onSnapshot vérifiera les permissions de toute façon
-                console.warn('⚠️ checkListMembership erreur réseau, on suppose membre:', e);
-                return true;
+                // Erreur réseau → on refuse l'accès par sécurité (fail secure)
+                console.warn('⚠️ checkListMembership erreur réseau, accès refusé:', e);
+                return false;
             }
         }
 
@@ -2349,6 +2362,11 @@
         let mealSectionOrder = [];       // Ordre d'affichage des sections
         let collapsedMealSections = {};  // { sectionId: true/false }
         let mealSearchTerm = '';
+        // Rate limiting pour les codes d'invitation
+        let joinAttempts = 0;
+        let joinFirstAttemptTime = 0;
+        const JOIN_MAX_ATTEMPTS = 5;
+        const JOIN_WINDOW_MS = 60000; // 1 minute
         let articleSections = {};        // { sectionId: { name, icon } }
         let articleSectionOrder = [];    // Ordre d'affichage des sections articles
         let mealsCollapsed = false;
@@ -2369,7 +2387,7 @@
             const savedArticlesCollapsed = localStorage.getItem('articlesCollapsed');
             
             if (savedCollapsed) {
-                collapsedCategories = JSON.parse(savedCollapsed);
+                try { collapsedCategories = JSON.parse(savedCollapsed); } catch (e) { console.warn('⚠️ collapsedCategories corrompu, reset:', e); }
             }
 
             if (savedMealsCollapsed !== null) {
@@ -2392,30 +2410,20 @@
             // If no Firebase data, load from localStorage
             console.log('📂 Chargement depuis localStorage...');
             
-            if (savedMeals) {
-                meals = JSON.parse(savedMeals);
-            }
-            if (savedMealOrder) {
-                mealOrder = JSON.parse(savedMealOrder);
-            }
-            if (savedMealSections) {
-                mealSections = JSON.parse(savedMealSections);
-            }
-            if (savedMealSectionOrder) {
-                mealSectionOrder = JSON.parse(savedMealSectionOrder);
-            }
-            if (savedCollapsedMealSections) {
-                collapsedMealSections = JSON.parse(savedCollapsedMealSections);
-            }
-            if (savedArticleSections) {
-                articleSections = JSON.parse(savedArticleSections);
-            }
-            if (savedArticleSectionOrder) {
-                articleSectionOrder = JSON.parse(savedArticleSectionOrder);
+            try {
+                if (savedMeals) meals = JSON.parse(savedMeals);
+                if (savedMealOrder) mealOrder = JSON.parse(savedMealOrder);
+                if (savedMealSections) mealSections = JSON.parse(savedMealSections);
+                if (savedMealSectionOrder) mealSectionOrder = JSON.parse(savedMealSectionOrder);
+                if (savedCollapsedMealSections) collapsedMealSections = JSON.parse(savedCollapsedMealSections);
+                if (savedArticleSections) articleSections = JSON.parse(savedArticleSections);
+                if (savedArticleSectionOrder) articleSectionOrder = JSON.parse(savedArticleSectionOrder);
+            } catch (e) {
+                console.warn('⚠️ Données localStorage corrompues, utilisation des valeurs par défaut:', e);
             }
 
             if (saved) {
-                groceryList = JSON.parse(saved);
+                try { groceryList = JSON.parse(saved); } catch (e) { console.warn('⚠️ groceryList corrompu, reset:', e); }
                 
                 // Migration: split old combined categories into new separate ones
                 if (groceryList['fruits-legumes']) {
@@ -3815,7 +3823,7 @@
                                         <div class="ingredient-checkbox-item">
                                             <input type="checkbox"
                                                    id="ing-${categoryKey}-${item.id}"
-                                                   value='${value}'>
+                                                   value="${escapeHtml(value)}">
                                             <label for="ing-${categoryKey}-${item.id}">${escapeHtml(item.name)}</label>
                                         </div>
                                     `;
@@ -4132,7 +4140,7 @@
                                             <div class="ingredient-checkbox-item">
                                                 <input type="checkbox"
                                                        id="ing-${categoryKey}-${item.id}"
-                                                       value='${value}'
+                                                       value="${escapeHtml(value)}"
                                                        ${isChecked ? 'checked' : ''}>
                                                 <label for="ing-${categoryKey}-${item.id}">${escapeHtml(item.name)}</label>
                                             </div>
