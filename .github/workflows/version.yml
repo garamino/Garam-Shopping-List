@@ -22,7 +22,7 @@ jobs:
       - name: 🔢 Incrémenter la version
         run: |
           # Lire la version actuelle
-          CURRENT=$(cat version.json | python3 -c "import sys,json; print(json.load(sys.stdin)['version'])")
+          CURRENT=$(cat public/version.json | python3 -c "import sys,json; print(json.load(sys.stdin)['version'])")
           echo "Version actuelle: $CURRENT"
 
           # Incrémenter le patch (2.0.0 → 2.0.1)
@@ -32,10 +32,10 @@ jobs:
           echo "Nouvelle version: $NEW_VERSION"
 
           # Mettre à jour version.json
-          echo "{\"version\": \"$NEW_VERSION\"}" > version.json
+          echo "{\"version\": \"$NEW_VERSION\"}" > public/version.json
 
           # Mettre à jour le CACHE_NAME dans service-worker.js
-          sed -i "s/const CACHE_NAME = 'liste-courses-v[^']*'/const CACHE_NAME = 'liste-courses-v$NEW_VERSION'/" service-worker.js
+          sed -i "s/const CACHE_NAME = 'liste-courses-v[^']*'/const CACHE_NAME = 'liste-courses-v$NEW_VERSION'/" public/service-worker.js
 
           echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
 
@@ -43,6 +43,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add version.json service-worker.js
+          git add public/version.json public/service-worker.js
           git commit -m "v${{ env.NEW_VERSION }} [skip ci]"
           git push

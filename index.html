@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.googleapis.com https://*.gstatic.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebasestorage.app https://*.cloudfunctions.net; frame-src https://accounts.google.com https://*.firebaseapp.com;">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ma Liste de Courses</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Application de liste de courses intelligente avec gestion de plats">
+    <meta name="theme-color" content="#667eea">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Liste Courses">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="settings-btn" onclick="openSettingsModal()" title="Paramètres">⚙️</button>
+            <div style="display: flex; justify-content: center; margin-bottom: 15px;">
+                <img src="header-logo.png" alt="Ma Liste de Courses" style="width: 120px; height: 120px; object-fit: contain;">
+            </div>
+            <div id="activeListName" style="text-align: center; font-size: 13px; font-weight: 600; color: #ffffff; margin-bottom: 4px; display: none;"></div>
+            <div style="display: flex; justify-content: center; align-items: center; gap: 15px;">
+                <span class="update-status" onclick="checkForUpdates()" title="Vérifier les mises à jour">
+                    <span class="update-status-icon" id="updateStatusIcon">✅</span>
+                    <span id="updateStatusText">À jour</span>
+                </span>
+                <div id="syncStatus" style="font-size: 12px; opacity: 0.8;">
+                    <span id="syncIcon">☁️</span> <span id="syncText">Synchronisation...</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="meals-section">
+            <div class="meals-header" onclick="toggleMealsSection()" style="cursor: pointer; user-select: none;">
+                <div class="meals-title">
+                    🍽️ Mes Plats
+                </div>
+                <span class="category-chevron" id="mealsChevron" style="font-size: 12px; transition: transform 0.3s; color: #999;">▼</span>
+                <div class="meals-header-buttons" style="margin-left: auto;">
+                    <button class="add-section-btn" onclick="event.stopPropagation(); openCreateSectionModal()" title="Nouvelle section">+ Section</button>
+                    <button class="add-meal-btn" onclick="event.stopPropagation(); openMealModal()">+ Nouveau plat</button>
+                </div>
+            </div>
+            <div class="meals-controls" id="mealsControls">
+                <div class="meals-search-row">
+                    <input type="text" class="meals-search-box" id="mealsSearchBox" placeholder="🔍 Rechercher un plat...">
+                    <button class="collapse-all-btn" id="mealsCollapseAllBtn" onclick="toggleAllMealSections()" title="Replier/Déplier tout">
+                        ⬍
+                    </button>
+                </div>
+            </div>
+            <div class="meals-list" id="mealsList"></div>
+        </div>
+
+        <div class="articles-section">
+            <div class="articles-header" onclick="toggleArticlesSection()" style="cursor: pointer; user-select: none; display: flex; align-items: center; padding: 20px; background: #f8f9fa; border-bottom: 1px solid #e9ecef; gap: 8px;">
+                <div class="articles-title" style="font-size: 18px; font-weight: 600; color: #333; display: flex; align-items: center; gap: 10px; white-space: nowrap;">
+                    📦 Mes Articles
+                </div>
+                <span class="category-chevron" id="articlesChevron" style="font-size: 12px; transition: transform 0.3s; color: #999;">▼</span>
+                <div class="meals-header-buttons" style="margin-left: auto;">
+                    <button class="add-section-btn" onclick="event.stopPropagation(); openCreateArticleSectionModal()" title="Nouvelle section">+ Section</button>
+                    <button class="add-meal-btn" onclick="event.stopPropagation(); openAddArticleModal()">+ Nouvel article</button>
+                </div>
+            </div>
+            <div class="articles-content" id="articlesContent">
+                <div class="controls">
+                    <div class="search-row">
+                        <input type="text" class="search-box" id="searchBox" placeholder="🔍 Rechercher un article...">
+                        <button class="collapse-all-btn" id="collapseAllBtn" onclick="toggleAllCategories()" title="Replier/Déplier tout">
+                            ⬍
+                        </button>
+                    </div>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-filter="all">Tout</button>
+                        <button class="filter-btn" data-filter="checked">À acheter</button>
+                        <button class="filter-btn" data-filter="active">Non sélectionnés</button>
+                    </div>
+                </div>
+
+                <div id="categoriesContainer"></div>
+
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-value" id="totalItems">0</div>
+                        <div class="stat-label">Total</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="checkedItems">0</div>
+                        <div class="stat-label">À acheter</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="remainingItems">0</div>
+                        <div class="stat-label">Non sélectionnés</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for moving items -->
+    <div id="moveModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Déplacer vers...</div>
+            <div class="modal-categories" id="modalCategories"></div>
+            <button class="modal-close" onclick="closeMoveModal()">Annuler</button>
+        </div>
+    </div>
+
+    <!-- Modal for renaming items -->
+    <div id="renameModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Renommer l'article</div>
+            <input type="text" class="rename-input" id="renameInput" placeholder="Nouveau nom...">
+            <div class="modal-buttons">
+                <button class="modal-confirm" onclick="confirmRename()">Confirmer</button>
+                <button class="modal-cancel" onclick="closeRenameModal()">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for quantity -->
+    <div id="quantityModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Quantité</div>
+            <p style="color: #666; font-size: 14px; margin-bottom: 15px;" id="quantityItemName">Article</p>
+            <input type="text" class="rename-input" id="quantityInput" placeholder="Ex: 7, 2kg, 500g...">
+            <p style="font-size: 12px; color: #999; margin: 10px 0;">💡 Exemples : x7, 2, 1kg, 500g, 2L</p>
+            <div class="modal-buttons">
+                <button class="modal-confirm" onclick="confirmQuantity()">Confirmer</button>
+                <button class="modal-cancel" onclick="removeQuantity()" style="background: #f44336;">Supprimer</button>
+                <button class="modal-cancel" onclick="closeQuantityModal()">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for adding article -->
+    <div id="addArticleModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Ajouter un article</div>
+            <input type="text" class="rename-input" id="modalArticleName" placeholder="Nom de l'article..." style="margin-bottom: 15px;">
+            <select class="rename-input" id="modalArticleCategory" style="margin-bottom: 15px; height: 45px;">
+                <option value="">Sélectionnez une section...</option>
+            </select>
+            <div class="modal-buttons">
+                <button class="modal-confirm" onclick="confirmAddArticle()">Ajouter</button>
+                <button class="modal-cancel" onclick="closeAddArticleModal()">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for creating meals -->
+    <div id="mealModal" class="modal">
+        <div class="modal-content meal-modal-content">
+            <div class="modal-header" id="mealModalHeader">Créer un nouveau plat</div>
+            <input type="text" class="rename-input" id="mealNameInput" placeholder="Nom du plat...">
+            <select class="rename-input" id="mealSectionSelect" style="margin-bottom: 15px; height: 45px;">
+                <option value="">Aucune section</option>
+            </select>
+            <div class="ingredient-selector" id="ingredientSelector"></div>
+            <div class="modal-buttons">
+                <button class="modal-confirm" id="mealConfirmBtn" onclick="confirmMeal()">Créer le plat</button>
+                <button class="modal-cancel" onclick="closeMealModal()">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for creating/renaming meal sections -->
+    <div id="mealSectionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header" id="mealSectionModalHeader">Nouvelle section</div>
+            <div class="emoji-picker" id="sectionEmojiPicker">
+                <button type="button" class="emoji-option selected" onclick="selectSectionEmoji('📁', this)">📁</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🍕', this)">🍕</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🍝', this)">🍝</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🍣', this)">🍣</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🍜', this)">🍜</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🥗', this)">🥗</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🍔', this)">🍔</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🍟', this)">🍟</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🌮', this)">🌮</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🥘', this)">🥘</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🍰', this)">🍰</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🧁', this)">🧁</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🍩', this)">🍩</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🎂', this)">🎂</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🥐', this)">🥐</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🍳', this)">🍳</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🥩', this)">🥩</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🐟', this)">🐟</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🥬', this)">🥬</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🍎', this)">🍎</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('❄️', this)">❄️</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🍹', this)">🍹</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('🏠', this)">🏠</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('⭐', this)">⭐</button>
+                <button type="button" class="emoji-option" onclick="selectSectionEmoji('❤️', this)">❤️</button>
+            </div>
+            <input type="hidden" id="sectionEmojiValue" value="📁">
+            <input type="text" class="rename-input" id="mealSectionNameInput" placeholder="Nom de la section...">
+            <div class="modal-buttons">
+                <button class="modal-confirm" id="mealSectionConfirmBtn" onclick="confirmMealSection()">Créer</button>
+                <button class="modal-cancel" onclick="closeMealSectionModal()">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for moving meal to section -->
+    <div id="moveMealSectionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Déplacer vers une section</div>
+            <div class="modal-categories" id="mealSectionPickerList"></div>
+            <div class="modal-buttons">
+                <button class="modal-cancel" onclick="closeMoveMealSectionModal()">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for creating/renaming article sections -->
+    <div id="articleSectionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header" id="articleSectionModalHeader">Nouvelle section</div>
+            <div class="emoji-picker" id="articleSectionEmojiPicker">
+                <button type="button" class="emoji-option selected" onclick="selectArticleSectionEmoji('📁', this)">📁</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('🍎', this)">🍎</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('🥬', this)">🥬</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('🥩', this)">🥩</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('🐟', this)">🐟</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('🥛', this)">🥛</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('🥫', this)">🥫</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('🥖', this)">🥖</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('❄️', this)">❄️</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('🥤', this)">🥤</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('🧴', this)">🧴</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('📦', this)">📦</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('🧀', this)">🧀</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('🥚', this)">🥚</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('🍫', this)">🍫</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('🍷', this)">🍷</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('🧹', this)">🧹</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('🏠', this)">🏠</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('⭐', this)">⭐</button>
+                <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('❤️', this)">❤️</button>
+            </div>
+            <input type="hidden" id="articleSectionEmojiValue" value="📁">
+            <input type="text" class="rename-input" id="articleSectionNameInput" placeholder="Nom de la section...">
+            <div class="modal-buttons">
+                <button class="modal-confirm" id="articleSectionConfirmBtn" onclick="confirmCreateArticleSection()">Créer</button>
+                <button class="modal-cancel" onclick="closeArticleSectionModal()">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recipe Modal -->
+    <div id="recipeModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header" id="recipeModalHeader">📖 Recette</div>
+            <!-- Read mode -->
+            <div id="recipeReadView">
+                <div class="recipe-read-content" id="recipeReadContent"></div>
+                <div class="modal-buttons">
+                    <button class="recipe-edit-btn" onclick="switchRecipeToEdit()">✏️ Modifier</button>
+                    <button class="modal-cancel" onclick="closeRecipeModal()">Fermer</button>
+                </div>
+            </div>
+            <!-- Edit mode -->
+            <div id="recipeEditView" style="display:none; flex:1; display:none; flex-direction:column;">
+                <textarea class="recipe-textarea" id="recipeTextarea" placeholder="Écrivez votre recette ici..."></textarea>
+                <div class="modal-buttons">
+                    <button class="modal-confirm" onclick="saveRecipe()">Sauvegarder</button>
+                    <button class="modal-cancel" onclick="closeRecipeModal()">Annuler</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- List Picker Modal -->
+    <div id="listPickerModal" class="auth-modal" onclick="if(event.target===this) closeListPicker()">
+        <div class="auth-modal-content">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:15px;">
+                <div class="auth-modal-header" style="margin-bottom:0;">📋 Choisir une liste</div>
+                <button onclick="closeListPicker()" title="Fermer" style="background:none; border:none; font-size:22px; cursor:pointer; color:#999; line-height:1; padding:0 4px;">✕</button>
+            </div>
+            <p style="color:#666; font-size:14px; margin-bottom:15px;">Sélectionnez la liste à ouvrir :</p>
+            <div id="listPickerItems"></div>
+            <button onclick="closeListPicker()" style="width:100%; margin-top:10px; padding:10px; background:none; border:2px solid #e9ecef; border-radius:8px; color:#666; font-size:14px; cursor:pointer;">Annuler</button>
+        </div>
+    </div>
+
+    <!-- Authentication Modal -->
+    <div id="authModal" class="auth-modal">
+        <div class="auth-modal-content">
+            <div class="auth-modal-header">🔐 Connexion</div>
+            <input type="email" class="auth-input" id="loginEmailInput" placeholder="Votre email" autocomplete="email">
+            <div class="password-wrapper">
+                <input type="password" class="auth-input" id="loginPasswordInput" placeholder="Votre mot de passe" autocomplete="current-password">
+                <button type="button" class="password-toggle" onclick="togglePasswordVisibility(this)" aria-label="Afficher le mot de passe">👁️</button>
+            </div>
+            <p id="loginError" style="color:#dc3545;font-size:13px;display:none;margin-top:-8px;text-align:left;"></p>
+            <button class="auth-button" onclick="loginWithEmail()">Se connecter</button>
+            <div class="auth-divider">ou</div>
+            <button class="auth-button auth-button-google" onclick="loginWithGoogle()">🔵 Continuer avec Google</button>
+            <div class="auth-divider">pas encore de compte ?</div>
+            <button class="auth-button auth-button-secondary" onclick="showCreateAccount()">Créer un compte</button>
+        </div>
+    </div>
+
+    <!-- Create Account Modal -->
+    <div id="createAccountModal" class="auth-modal">
+        <div class="auth-modal-content">
+            <div class="auth-modal-header">✨ Nouveau compte</div>
+            <input type="email" class="auth-input" id="newEmailInput" placeholder="Votre email" autocomplete="email">
+            <div class="password-wrapper">
+                <input type="password" class="auth-input" id="newPasswordInput" placeholder="Mot de passe (min. 6 car.)" autocomplete="new-password">
+                <button type="button" class="password-toggle" onclick="togglePasswordVisibility(this)" aria-label="Afficher le mot de passe">👁️</button>
+            </div>
+            <div class="password-wrapper">
+                <input type="password" class="auth-input" id="confirmPasswordInput" placeholder="Confirmer le mot de passe" autocomplete="new-password">
+                <button type="button" class="password-toggle" onclick="togglePasswordVisibility(this)" aria-label="Afficher le mot de passe">👁️</button>
+            </div>
+            <p id="registerError" style="color:#dc3545;font-size:13px;display:none;margin-top:-8px;text-align:left;"></p>
+            <button class="auth-button" onclick="registerWithEmail()">Créer mon compte</button>
+            <div class="auth-divider">ou</div>
+            <button class="auth-button auth-button-google" onclick="loginWithGoogle()">🔵 Continuer avec Google</button>
+            <button class="auth-button auth-button-secondary" onclick="backToLogin()">Retour</button>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">⚙️ Paramètres</div>
+            <div style="text-align: left; margin: 20px 0;">
+                <p style="margin-bottom: 10px;"><strong>Compte connecté :</strong></p>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 15px;">
+                    <code id="displayUserCode" style="font-size: 15px; font-weight: 600; color: #667eea;">---</code>
+                </div>
+
+                <!-- Section liste partagée active -->
+                <div id="sharedListSection" style="display:none; background:#f0f7ff; padding:15px; border-radius:10px; margin-bottom:12px; border:2px solid #667eea;">
+                    <!-- Nom de la liste + bouton renommer -->
+                    <div id="activeListNameRow" style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                        <p style="font-weight:600; color:#667eea; margin:0; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">👥 <span id="activeListName">Liste partagée</span></p>
+                        <button onclick="startRenameList()" style="font-size:12px; padding:3px 9px; border:1px solid #667eea; background:white; color:#667eea; border-radius:5px; cursor:pointer; flex-shrink:0;">✏️</button>
+                    </div>
+                    <!-- Formulaire inline renommage (masqué par défaut) -->
+                    <div id="renameListForm" style="display:none; margin-bottom:8px;">
+                        <div style="display:flex; gap:6px; align-items:center;">
+                            <input type="text" id="renameListInput"
+                                   placeholder="Nouveau nom de la liste"
+                                   onkeydown="if(event.key==='Enter') saveRenameList(); if(event.key==='Escape') cancelRenameList();"
+                                   style="flex:1; padding:7px 10px; border:2px solid #667eea; border-radius:6px; font-size:14px; outline:none;">
+                            <button onclick="saveRenameList()" title="Valider" style="padding:6px 11px; background:#667eea; color:white; border:none; border-radius:6px; cursor:pointer; font-size:15px; font-weight:bold;">✓</button>
+                            <button onclick="cancelRenameList()" title="Annuler" style="padding:6px 11px; background:#6c757d; color:white; border:none; border-radius:6px; cursor:pointer; font-size:15px;">✕</button>
+                        </div>
+                    </div>
+                    <div id="presenceContainer" style="font-size:13px; margin-bottom:10px;"></div>
+                    <div id="shareCodeSection" style="display:none; margin-bottom:10px;">
+                        <p style="font-size:12px; color:#666; margin-bottom:4px;">Code d'invitation :</p>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <code id="shareCodeDisplay" style="font-size:22px; font-weight:bold; color:#667eea; letter-spacing:4px;"></code>
+                            <button onclick="copyShareCode()" style="font-size:12px; padding:4px 10px; border:1px solid #667eea; background:white; color:#667eea; border-radius:5px; cursor:pointer;">Copier</button>
+                        </div>
+                    </div>
+                    <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                        <button onclick="showShareCode()" style="font-size:12px; padding:6px 12px; background:#667eea; color:white; border:none; border-radius:6px; cursor:pointer;">Voir le code</button>
+                        <button onclick="changeListDefault()" style="font-size:12px; padding:6px 12px; background:#28a745; color:white; border:none; border-radius:6px; cursor:pointer;">⭐ Par défaut</button>
+                        <button onclick="switchList()" style="font-size:12px; padding:6px 12px; background:#6c757d; color:white; border:none; border-radius:6px; cursor:pointer;">🔄 Changer</button>
+                        <button onclick="leaveSharedList()" style="font-size:12px; padding:6px 12px; background:#dc3545; color:white; border:none; border-radius:6px; cursor:pointer;">Quitter</button>
+                    </div>
+                </div>
+
+                <!-- Section créer/rejoindre (liste personnelle) -->
+                <div id="personalListSection" style="margin-bottom:12px;">
+                    <button id="switchToSharedBtn" onclick="switchList()" style="display:none; width:100%; margin-bottom:8px; padding:10px; background:#667eea; color:white; border:none; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600;">
+                        🔄 Revenir à une liste partagée
+                    </button>
+                    <button onclick="createSharedList()" class="modal-confirm" style="width:100%; margin-bottom:8px;">
+                        🔗 Créer une liste partagée
+                    </button>
+                    <div style="display:flex; gap:8px;">
+                        <input type="text" id="joinCodeInput" placeholder="Code (ex: ABC123)" maxlength="6"
+                               style="flex:1; padding:10px; border:2px solid #e9ecef; border-radius:8px; font-size:15px; text-transform:uppercase; letter-spacing:2px; text-align:center;">
+                        <button onclick="joinSharedList()" class="modal-confirm" style="white-space:nowrap;">Rejoindre</button>
+                    </div>
+                </div>
+
+                <!-- Test page link -->
+                <div id="testPageLink" style="display: none; background: #e3f2fd; padding: 15px; border-radius: 10px; margin-bottom: 12px; border: 2px solid #2196f3;">
+                    <p style="margin-bottom: 10px; color: #1976d2; font-weight: 600;">🧪 Mode Développeur</p>
+                    <a href="tests.html" target="_blank" style="color: #667eea; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 5px;">
+                        🔬 Ouvrir la page de tests
+                        <span style="font-size: 12px;">↗</span>
+                    </a>
+                </div>
+            </div>
+            <p id="appVersion" style="text-align:center; color:#adb5bd; font-size:12px; margin:0 0 12px 0;">Version ...</p>
+            <button class="modal-confirm" onclick="logout()" style="background: #dc3545; width: 100%; margin-bottom: 10px;">
+                🚪 Se déconnecter
+            </button>
+            <button class="modal-cancel" onclick="closeSettingsModal()">Fermer</button>
+        </div>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+</body>
+</html>

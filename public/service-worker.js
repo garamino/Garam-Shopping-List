@@ -1,6 +1,6 @@
 const CACHE_NAME = 'liste-courses-v2.0.9'; // Incrémentez ce numéro à chaque mise à jour
 const urlsToCache = [
-  './liste-courses.html',
+  './',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
@@ -44,6 +44,9 @@ self.addEventListener('activate', function(event) {
 
 // Interception des requêtes - Strategy: Network First, then Cache
 self.addEventListener('fetch', function(event) {
+  // Ne pas intercepter les requêtes POST (Firebase Firestore, Auth)
+  if (event.request.method !== 'GET') return;
+
   event.respondWith(
     fetch(event.request)
       .then(function(response) {
