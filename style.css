@@ -74,9 +74,15 @@
             margin-bottom: 15px;
         }
 
-        .search-box {
+        .search-wrapper {
             flex: 1;
-            padding: 12px 15px;
+            position: relative;
+        }
+
+        .search-box {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 12px 40px 12px 15px;
             border: 2px solid #e9ecef;
             border-radius: 10px;
             font-size: 16px;
@@ -86,6 +92,29 @@
         .search-box:focus {
             outline: none;
             border-color: #667eea;
+        }
+
+        .search-clear-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #ccc;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            font-size: 14px;
+            line-height: 22px;
+            text-align: center;
+            cursor: pointer;
+            display: none;
+            padding: 0;
+        }
+
+        .search-clear-btn:active {
+            background: #999;
         }
 
         .collapse-all-btn {
@@ -701,8 +730,9 @@
         }
 
         .meals-search-box {
-            flex: 1;
-            padding: 12px 15px;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 12px 40px 12px 15px;
             border: 2px solid #e9ecef;
             border-radius: 10px;
             font-size: 16px;

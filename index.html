@@ -47,7 +47,10 @@
             </div>
             <div class="meals-controls" id="mealsControls">
                 <div class="meals-search-row">
-                    <input type="text" class="meals-search-box" id="mealsSearchBox" placeholder="🔍 Rechercher un plat...">
+                    <div class="search-wrapper">
+                        <input type="text" class="meals-search-box" id="mealsSearchBox" placeholder="🔍 Rechercher un plat...">
+                        <button class="search-clear-btn" id="mealsSearchClearBtn" title="Effacer la recherche">✕</button>
+                    </div>
                     <button class="collapse-all-btn" id="mealsCollapseAllBtn" onclick="toggleAllMealSections()" title="Replier/Déplier tout">
                         ⬍
                     </button>
@@ -70,7 +73,10 @@
             <div class="articles-content" id="articlesContent">
                 <div class="controls">
                     <div class="search-row">
-                        <input type="text" class="search-box" id="searchBox" placeholder="🔍 Rechercher un article...">
+                        <div class="search-wrapper">
+                            <input type="text" class="search-box" id="searchBox" placeholder="🔍 Rechercher un article...">
+                            <button class="search-clear-btn" id="searchClearBtn" title="Effacer la recherche">✕</button>
+                        </div>
                         <button class="collapse-all-btn" id="collapseAllBtn" onclick="toggleAllCategories()" title="Replier/Déplier tout">
                             ⬍
                         </button>

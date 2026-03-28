@@ -3129,12 +3129,32 @@ CapApp.addListener('appStateChange', ({ isActive }) => {
         // Event Listeners
         document.getElementById('searchBox').addEventListener('input', (e) => {
             searchTerm = e.target.value;
+            document.getElementById('searchClearBtn').style.display = searchTerm ? 'block' : 'none';
             renderCategories();
+        });
+
+        document.getElementById('searchClearBtn').addEventListener('click', () => {
+            const box = document.getElementById('searchBox');
+            box.value = '';
+            searchTerm = '';
+            document.getElementById('searchClearBtn').style.display = 'none';
+            renderCategories();
+            box.focus();
         });
 
         document.getElementById('mealsSearchBox').addEventListener('input', (e) => {
             mealSearchTerm = e.target.value;
+            document.getElementById('mealsSearchClearBtn').style.display = mealSearchTerm ? 'block' : 'none';
             renderMeals();
+        });
+
+        document.getElementById('mealsSearchClearBtn').addEventListener('click', () => {
+            const box = document.getElementById('mealsSearchBox');
+            box.value = '';
+            mealSearchTerm = '';
+            document.getElementById('mealsSearchClearBtn').style.display = 'none';
+            renderMeals();
+            box.focus();
         });
 
         document.querySelectorAll('.filter-btn').forEach(btn => {
