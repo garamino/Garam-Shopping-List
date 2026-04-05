@@ -2,7 +2,7 @@
   "name": "Ma Liste de Courses",
   "short_name": "Courses",
   "description": "Application de liste de courses intelligente avec gestion de plats",
-  "start_url": "./",
+  "start_url": "./liste-courses.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#667eea",
