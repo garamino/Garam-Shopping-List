@@ -3859,7 +3859,7 @@
                                         <div class="ingredient-checkbox-item">
                                             <input type="checkbox"
                                                    id="ing-${categoryKey}-${item.id}"
-                                                   value="${escapeHtml(value)}">
+                                                   value='${escapeHtml(value)}'>
                                             <label for="ing-${categoryKey}-${item.id}">${escapeHtml(item.name)}</label>
                                         </div>
                                     `;
@@ -4176,7 +4176,7 @@
                                             <div class="ingredient-checkbox-item">
                                                 <input type="checkbox"
                                                        id="ing-${categoryKey}-${item.id}"
-                                                       value="${escapeHtml(value)}"
+                                                       value='${escapeHtml(value)}'
                                                        ${isChecked ? 'checked' : ''}>
                                                 <label for="ing-${categoryKey}-${item.id}">${escapeHtml(item.name)}</label>
                                             </div>
