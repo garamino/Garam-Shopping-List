@@ -1,4 +1,4 @@
-const CACHE_NAME = 'liste-courses-v2.0.11'; // Incrémentez ce numéro à chaque mise à jour
+const CACHE_NAME = 'liste-courses-v2.0.12'; // Incrémentez ce numéro à chaque mise à jour
 const urlsToCache = [
   './',
   './manifest.json',
