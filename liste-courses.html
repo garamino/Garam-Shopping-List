@@ -2281,7 +2281,15 @@
 
             listUnsubscribe = db.collection('lists').doc(listId).onSnapshot((doc) => {
                 if (!doc.exists) return;
+
+                // Protéger les changements locaux non sauvés contre l'écrasement par un snapshot distant
+                if (pendingLocalChanges && !doc.metadata.hasPendingWrites) {
+                    console.log('⏳ onSnapshot ignoré : changements locaux en attente');
+                    return;
+                }
+
                 const data = doc.data();
+                pendingLocalChanges = false; // Le snapshot distant est maintenant notre état de référence
 
                 if (data.groceryList) {
                     groceryList = data.groceryList;
@@ -2664,7 +2672,24 @@
             ensureArticleSections();
         }
 
-        let saveTimeout = null; // Timer for debouncing
+        let pendingLocalChanges = false; // True quand des changements locaux n'ont pas encore été sauvés sur Firebase
+
+        // Récupérer une sauvegarde interrompue (ex: app fermée sur mobile avant que Firebase ait reçu le write)
+        function checkPendingSave() {
+            const pendingSave = localStorage.getItem('pendingSave');
+            const pendingSaveTime = localStorage.getItem('pendingSaveTime');
+            if (pendingSave && pendingSaveTime) {
+                const age = Date.now() - parseInt(pendingSaveTime);
+                // Seulement si < 5 minutes (éviter les données périmées)
+                if (age < 5 * 60 * 1000 && dataLoaded && isFirebaseReady) {
+                    console.log('🔄 Récupération sauvegarde interrompue (' + Math.round(age / 1000) + 's)');
+                    pendingLocalChanges = true;
+                    saveToFirebase();
+                }
+                localStorage.removeItem('pendingSave');
+                localStorage.removeItem('pendingSaveTime');
+            }
+        }
 
         // Sauvegarde locale uniquement (état d'affichage — pas de sync Firebase)
         function saveCollapseState() {
@@ -2676,6 +2701,8 @@
 
         function saveToLocalStorage() {
             if (!dataLoaded) return; // Ne pas sauvegarder tant que les données n'ont pas été chargées
+            pendingLocalChanges = true;
+
             // Save to localStorage (backup) - IMMEDIATE
             localStorage.setItem('groceryList', JSON.stringify(groceryList));
             localStorage.setItem('meals', JSON.stringify(meals));
@@ -2684,17 +2711,9 @@
             localStorage.setItem('mealSectionOrder', JSON.stringify(mealSectionOrder));
             localStorage.setItem('articleSections', JSON.stringify(articleSections));
             localStorage.setItem('articleSectionOrder', JSON.stringify(articleSectionOrder));
-            
-            // Show "pending" status immediately
-            updateSyncStatus('pending');
-            
-            // Cancel previous timer if exists
-            clearTimeout(saveTimeout);
-            
-            // Wait 5 seconds before saving to Firebase
-            saveTimeout = setTimeout(() => {
-                saveToFirebase();
-            }, 1000); // 1 second debouncing
+
+            // Sauvegarde Firebase immédiate (pas de debounce)
+            saveToFirebase();
         }
 
         async function saveToFirebase() {
@@ -2731,9 +2750,11 @@
                     await db.collection('users').doc(userId).set(dataToSave, { merge: true });
                 }
 
+                pendingLocalChanges = false;
                 console.log('✅ Données sauvegardées sur Firebase');
                 updateSyncStatus('synced');
             } catch (error) {
+                // pendingLocalChanges reste true — les données sont toujours non sauvées
                 console.error('❌ Erreur de sauvegarde Firebase:', error);
                 updateSyncStatus('error');
             }
@@ -4910,6 +4931,9 @@
                     }
                 }
 
+                // Récupérer une sauvegarde interrompue de la session précédente
+                checkPendingSave();
+
                 renderCategories();
                 renderMeals();
                 updateArticlesCollapseState();
@@ -4917,25 +4941,9 @@
                 updateActiveListLabel();
             } else {
                 // Flush pending save BEFORE resetting state
-                if (saveTimeout && dataLoaded && isFirebaseReady && db && userId) {
-                    clearTimeout(saveTimeout);
-                    const dataToSave = {
-                        groceryList: groceryList,
-                        meals: meals,
-                        mealOrder: mealOrder,
-                        mealSections: mealSections,
-                        mealSectionOrder: mealSectionOrder,
-                        articleSections: articleSections,
-                        articleSectionOrder: articleSectionOrder,
-                                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                    };
-                    if (activeListId) {
-                        dataToSave[`presence.${userId}.lastSeen`] = new Date(0);
-                        db.collection('lists').doc(activeListId).set(dataToSave, { merge: true });
-                    } else {
-                        db.collection('users').doc(userId).set(dataToSave, { merge: true });
-                    }
-                    saveTimeout = null;
+                if (pendingLocalChanges && dataLoaded && isFirebaseReady && db && userId) {
+                    forceSaveToFirebase();
+                    pendingLocalChanges = false;
                     console.log('💾 Sauvegarde forcée avant déconnexion auth');
                 }
                 stopPresenceHeartbeat();
@@ -5056,30 +5064,36 @@
             }
         });
 
+        // Sauvegarde forcée — utilisée par beforeunload et visibilitychange
+        function forceSaveToFirebase() {
+            if (!isFirebaseReady || !db || !userId) return;
+            const dataToSave = {
+                groceryList: groceryList,
+                meals: meals,
+                mealOrder: mealOrder,
+                mealSections: mealSections,
+                mealSectionOrder: mealSectionOrder,
+                articleSections: articleSections,
+                articleSectionOrder: articleSectionOrder,
+                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            if (activeListId) {
+                dataToSave[`presence.${userId}.lastSeen`] = new Date(0);
+                db.collection('lists').doc(activeListId).set(dataToSave, { merge: true });
+            } else {
+                db.collection('users').doc(userId).set(dataToSave, { merge: true });
+            }
+        }
+
         // Force save to Firebase before closing the app/browser
         window.addEventListener('beforeunload', function(event) {
-            if (!dataLoaded) return; // Ne pas écraser Firebase avec des données vides
-            if (saveTimeout) {
-                clearTimeout(saveTimeout);
-                if (isFirebaseReady && db && userId) {
-                    const dataToSave = {
-                        groceryList: groceryList,
-                        meals: meals,
-                        mealOrder: mealOrder,
-                        mealSections: mealSections,
-                        mealSectionOrder: mealSectionOrder,
-                        articleSections: articleSections,
-                        articleSectionOrder: articleSectionOrder,
-                                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                    };
-                    if (activeListId) {
-                        dataToSave[`presence.${userId}.lastSeen`] = new Date(0);
-                        db.collection('lists').doc(activeListId).set(dataToSave, { merge: true });
-                    } else {
-                        db.collection('users').doc(userId).set(dataToSave, { merge: true });
-                    }
-                    console.log('💾 Sauvegarde forcée avant fermeture');
-                }
+            if (!dataLoaded) return;
+            if (pendingLocalChanges) {
+                forceSaveToFirebase();
+                // Fallback localStorage en cas d'échec du write Firebase
+                localStorage.setItem('pendingSave', 'true');
+                localStorage.setItem('pendingSaveTime', Date.now().toString());
+                console.log('💾 Sauvegarde forcée avant fermeture');
             } else if (isFirebaseReady && activeListId && userId) {
                 // Marquer comme hors-ligne même sans sauvegarde en attente
                 db.collection('lists').doc(activeListId).update({
@@ -5090,27 +5104,17 @@
 
         // Force save when app goes to background (mobile-friendly, beforeunload is unreliable on mobile)
         document.addEventListener('visibilitychange', function() {
-            if (document.visibilityState === 'hidden' && dataLoaded && saveTimeout) {
-                clearTimeout(saveTimeout);
-                if (isFirebaseReady && db && userId) {
-                    const dataToSave = {
-                        groceryList: groceryList,
-                        meals: meals,
-                        mealOrder: mealOrder,
-                        mealSections: mealSections,
-                        mealSectionOrder: mealSectionOrder,
-                        articleSections: articleSections,
-                        articleSectionOrder: articleSectionOrder,
-                                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                    };
-                    if (activeListId) {
-                        dataToSave[`presence.${userId}.lastSeen`] = new Date(0);
-                        db.collection('lists').doc(activeListId).set(dataToSave, { merge: true });
-                    } else {
-                        db.collection('users').doc(userId).set(dataToSave, { merge: true });
-                    }
-                    saveTimeout = null;
+            if (document.visibilityState === 'hidden' && dataLoaded) {
+                if (pendingLocalChanges) {
+                    forceSaveToFirebase();
+                    // Fallback localStorage en cas d'échec du write Firebase
+                    localStorage.setItem('pendingSave', 'true');
+                    localStorage.setItem('pendingSaveTime', Date.now().toString());
                     console.log('💾 Sauvegarde forcée (app en arrière-plan)');
+                } else if (isFirebaseReady && activeListId && userId) {
+                    db.collection('lists').doc(activeListId).update({
+                        [`presence.${userId}.lastSeen`]: new Date(0)
+                    });
                 }
             }
         });
