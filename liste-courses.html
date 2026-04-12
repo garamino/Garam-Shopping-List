@@ -5242,6 +5242,9 @@
             if (swRegistration && swRegistration.waiting) {
                 // Dire au service worker en attente de prendre le contrôle
                 swRegistration.waiting.postMessage({ action: 'skipWaiting' });
+            } else {
+                // Le SW s'est déjà activé (skipWaiting dans install), recharger pour appliquer
+                window.location.reload();
             }
         }
     </script>
