@@ -24,11 +24,23 @@ jobs:
           TODAY=$(date -u +%Y-%m-%d)
           echo "Date du jour: $TODAY"
 
-          # Compter les commits du jour (heure UTC) sur main
-          COUNT=$(git log --oneline --since="$TODAY" --until="$(date -u -d '+1 day' +%Y-%m-%d)" | wc -l)
-          # +1 car le commit de version lui-même s'ajoute
-          COUNT=$((COUNT + 1))
-          NEW_VERSION=$(printf "%s-%03d" "$TODAY" "$COUNT")
+          # Lire la version actuelle
+          CURRENT=$(python3 -c "import sys,json; print(json.load(open('public/version.json'))['version'])")
+          echo "Version actuelle: $CURRENT"
+
+          # Extraire la date et le numéro de la version courante
+          CURRENT_DATE=$(echo "$CURRENT" | grep -oE '^[0-9]{4}-[0-9]{2}-[0-9]{2}' || echo "")
+          CURRENT_NUM=$(echo "$CURRENT" | grep -oE '[0-9]+$' || echo "0")
+
+          if [ "$CURRENT_DATE" = "$TODAY" ]; then
+            # Même jour → incrémenter le numéro
+            NEW_NUM=$((10#$CURRENT_NUM + 1))
+          else
+            # Nouveau jour → repartir à 001
+            NEW_NUM=1
+          fi
+
+          NEW_VERSION=$(printf "%s-%03d" "$TODAY" "$NEW_NUM")
           echo "Nouvelle version: $NEW_VERSION"
 
           # Mettre à jour version.json
