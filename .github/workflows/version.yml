@@ -19,16 +19,16 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 🔢 Incrémenter la version
+      - name: 🔢 Générer la version du jour
         run: |
-          # Lire la version actuelle
-          CURRENT=$(cat public/version.json | python3 -c "import sys,json; print(json.load(sys.stdin)['version'])")
-          echo "Version actuelle: $CURRENT"
+          TODAY=$(date -u +%Y-%m-%d)
+          echo "Date du jour: $TODAY"
 
-          # Incrémenter le patch (2.0.0 → 2.0.1)
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
-          PATCH=$((PATCH + 1))
-          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+          # Compter les commits du jour (heure UTC) sur main
+          COUNT=$(git log --oneline --since="$TODAY" --until="$(date -u -d '+1 day' +%Y-%m-%d)" | wc -l)
+          # +1 car le commit de version lui-même s'ajoute
+          COUNT=$((COUNT + 1))
+          NEW_VERSION=$(printf "%s-%03d" "$TODAY" "$COUNT")
           echo "Nouvelle version: $NEW_VERSION"
 
           # Mettre à jour version.json

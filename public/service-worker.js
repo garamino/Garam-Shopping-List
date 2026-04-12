@@ -1,4 +1,4 @@
-const CACHE_NAME = 'liste-courses-v2.0.13'; // Incrémentez ce numéro à chaque mise à jour
+const CACHE_NAME = 'liste-courses-v2026-04-12-001'; // Mis à jour automatiquement par GitHub Actions
 const urlsToCache = [
   './',
   './manifest.json',
