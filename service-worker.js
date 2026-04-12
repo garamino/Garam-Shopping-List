@@ -10,9 +10,9 @@ const urlsToCache = [
 // Installation du Service Worker
 self.addEventListener('install', function(event) {
   console.log('[Service Worker] Installation en cours...');
-  // Force le nouveau service worker à s'activer immédiatement
-  self.skipWaiting();
-  
+  // Ne PAS appeler skipWaiting() ici — l'activation est déclenchée par l'app
+  // via postMessage({action:'skipWaiting'}) quand l'utilisateur confirme la MAJ
+
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(function(cache) {
