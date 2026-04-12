@@ -1842,7 +1842,7 @@
             testPageLink.style.display = currentUser ? 'block' : 'none';
             updateShareUI();
             // Charger la version
-            fetch('version.json?' + Date.now())
+            fetch('public/version.json?' + Date.now())
                 .then(r => r.json())
                 .then(data => {
                     document.getElementById('appVersion').textContent = 'Version ' + data.version;
