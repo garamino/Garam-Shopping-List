@@ -636,6 +636,17 @@ CapApp.addListener('appStateChange', ({ isActive }) => {
 
             listUnsubscribe = db.collection('lists').doc(listId).onSnapshot((doc) => {
                 if (!doc.exists) return;
+
+                // Garde anti-écrasement : si on a une écriture locale en cours dont
+                // le serveur n'a pas encore connaissance, ignorer ce snapshot serveur.
+                // Sinon il remplacerait nos modifs locales par l'ancien état serveur.
+                // (hasPendingWrites=true → c'est un echo de notre propre écriture, OK)
+                const hasPendingWrites = doc.metadata && doc.metadata.hasPendingWrites;
+                if (pendingWriteCount > 0 && !hasPendingWrites) {
+                    console.log('⏭️ Snapshot serveur ignoré : écriture locale en cours');
+                    return;
+                }
+
                 const data = doc.data();
 
                 if (data.groceryList) {
@@ -702,6 +713,22 @@ CapApp.addListener('appStateChange', ({ isActive }) => {
             db = firebase.firestore();
             auth = firebase.auth();
             auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
+            // Persistance offline : le SDK met les écritures en file dans IndexedDB
+            // et les rejoue automatiquement à la reconnexion. Indispensable pour ne
+            // pas perdre de données quand le réseau est instable ou que l'app est tuée.
+            db.enablePersistence({ synchronizeTabs: true })
+                .then(() => console.log('✅ Persistance Firestore activée'))
+                .catch((err) => {
+                    if (err.code === 'failed-precondition') {
+                        console.warn('⚠️ Persistance : plusieurs onglets ouverts sans synchronizeTabs');
+                    } else if (err.code === 'unimplemented') {
+                        console.warn('⚠️ Persistance : non supportée par ce navigateur');
+                    } else {
+                        console.warn('⚠️ Persistance non activée :', err);
+                    }
+                });
+
             console.log('✅ Firebase initialisé');
         } catch (error) {
             console.error('❌ Erreur Firebase:', error);
@@ -1019,7 +1046,8 @@ CapApp.addListener('appStateChange', ({ isActive }) => {
             ensureArticleSections();
         }
 
-        let saveTimeout = null; // Timer for debouncing
+        let saveTimeout = null; // Conservé pour compat (beforeunload), toujours null
+        let pendingWriteCount = 0; // Nb d'écritures Firebase en cours (pour bloquer les snapshots qui les écraseraient)
 
         // Sauvegarde locale uniquement (état d'affichage — pas de sync Firebase)
         function saveCollapseState() {
@@ -1042,14 +1070,12 @@ CapApp.addListener('appStateChange', ({ isActive }) => {
             
             // Show "pending" status immediately
             updateSyncStatus('pending');
-            
-            // Cancel previous timer if exists
-            clearTimeout(saveTimeout);
-            
-            // Wait 5 seconds before saving to Firebase
-            saveTimeout = setTimeout(() => {
-                saveToFirebase();
-            }, 1000); // 1 second debouncing
+
+            // Sauvegarde Firebase immédiate (pas de debounce).
+            // Avec la persistance offline activée, l'écriture est mise en file
+            // localement dans IndexedDB instantanément, puis le SDK la rejoue
+            // côté serveur. Aucun risque de perdre des modifs en fermant l'app.
+            saveToFirebase();
         }
 
         async function saveToFirebase() {
@@ -1063,6 +1089,7 @@ CapApp.addListener('appStateChange', ({ isActive }) => {
                 return;
             }
 
+            pendingWriteCount++;
             try {
                 updateSyncStatus('syncing');
 
@@ -1091,6 +1118,8 @@ CapApp.addListener('appStateChange', ({ isActive }) => {
             } catch (error) {
                 console.error('❌ Erreur de sauvegarde Firebase:', error);
                 updateSyncStatus('error');
+            } finally {
+                pendingWriteCount = Math.max(0, pendingWriteCount - 1);
             }
         }
 
