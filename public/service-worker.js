@@ -1,4 +1,4 @@
-const CACHE_NAME = 'liste-courses-v2026-05-27-001'; // Mis à jour automatiquement par GitHub Actions
+const CACHE_NAME = 'liste-courses-v2026-05-29-001'; // Mis à jour automatiquement par GitHub Actions
 const urlsToCache = [
   './',
   './manifest.json',
