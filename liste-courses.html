@@ -1978,7 +1978,7 @@
             updateShareUI();
             refreshGeminiKeyUI();
             // Charger la version
-            fetch('public/version.json?' + Date.now())
+            fetch('version.json?' + Date.now())
                 .then(r => r.json())
                 .then(data => {
                     document.getElementById('appVersion').textContent = 'Version ' + data.version;

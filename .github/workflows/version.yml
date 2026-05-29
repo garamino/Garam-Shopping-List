@@ -25,7 +25,7 @@ jobs:
           echo "Date du jour: $TODAY"
 
           # Lire la version actuelle
-          CURRENT=$(python3 -c "import sys,json; print(json.load(open('public/version.json'))['version'])")
+          CURRENT=$(python3 -c "import sys,json; print(json.load(open('version.json'))['version'])")
           echo "Version actuelle: $CURRENT"
 
           # Extraire la date et le numéro de la version courante
@@ -44,10 +44,9 @@ jobs:
           echo "Nouvelle version: $NEW_VERSION"
 
           # Mettre à jour version.json
-          echo "{\"version\": \"$NEW_VERSION\"}" > public/version.json
+          echo "{\"version\": \"$NEW_VERSION\"}" > version.json
 
-          # Mettre à jour le CACHE_NAME dans les deux service-worker.js (racine + public)
-          sed -i "s/const CACHE_NAME = 'liste-courses-v[^']*'/const CACHE_NAME = 'liste-courses-v$NEW_VERSION'/" public/service-worker.js
+          # Mettre à jour le CACHE_NAME dans service-worker.js
           sed -i "s/const CACHE_NAME = 'liste-courses-v[^']*'/const CACHE_NAME = 'liste-courses-v$NEW_VERSION'/" service-worker.js
 
           echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
@@ -56,6 +55,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/version.json public/service-worker.js service-worker.js
+          git add version.json service-worker.js
           git commit -m "v${{ env.NEW_VERSION }} [skip ci]"
           git push

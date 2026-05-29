@@ -57,7 +57,7 @@ jobs:
             
             // Charger la page de tests
             console.log('📄 Chargement de la page de tests...');
-            await page.goto('file://' + process.cwd() + '/public/tests.html');
+            await page.goto('file://' + process.cwd() + '/tests.html');
             
             // Attendre que la page soit prête
             await page.waitForTimeout(2000);
