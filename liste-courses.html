@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.googleapis.com https://*.gstatic.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebasestorage.app https://*.cloudfunctions.net; frame-src https://accounts.google.com https://*.firebaseapp.com;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.googleapis.com https://*.gstatic.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebasestorage.app https://*.cloudfunctions.net https://api.open-meteo.com https://api.bigdatacloud.net; frame-src https://accounts.google.com https://*.firebaseapp.com;">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ma Liste de Courses</title>
     
@@ -1098,6 +1098,102 @@
             flex: 1;
         }
 
+        /* AI seasonal suggestions */
+        .ai-suggest-btn {
+            padding: 6px 12px;
+            background: linear-gradient(135deg, #8e7cff, #667eea);
+            color: white;
+            border: 1.5px solid #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: filter 0.3s;
+            white-space: nowrap;
+            line-height: 1;
+        }
+        .ai-suggest-btn:hover { filter: brightness(1.08); }
+
+        .ai-modal-content { max-width: 560px; max-height: 85vh; overflow-y: auto; }
+
+        .ai-field-label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+        .ai-context-hint {
+            font-size: 12px;
+            color: #888;
+            margin: 4px 0 16px;
+        }
+        .ai-status {
+            text-align: center;
+            color: #667eea;
+            font-size: 14px;
+            margin: 14px 0;
+        }
+        .ai-error { color: #dc3545; }
+
+        .ai-results { margin-top: 16px; }
+        .ai-dish-card {
+            border: 1.5px solid #e9ecef;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 12px;
+            transition: border-color 0.3s, opacity 0.3s;
+        }
+        .ai-dish-card.added {
+            border-color: #28a745;
+            background: #f3fbf5;
+            opacity: 0.85;
+        }
+        .ai-dish-head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        .ai-dish-name {
+            font-weight: 700;
+            color: #333;
+            font-size: 15px;
+            flex: 1;
+        }
+        .ai-dish-add-btn {
+            padding: 6px 14px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .ai-dish-add-btn:disabled {
+            background: #adb5bd;
+            cursor: default;
+        }
+        .ai-ingredients {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .ai-ing-chip {
+            font-size: 12px;
+            background: #f0f2ff;
+            color: #4a4a6a;
+            padding: 4px 9px;
+            border-radius: 20px;
+        }
+        .ai-ing-chip.is-new::after {
+            content: " ✚";
+            color: #667eea;
+            font-weight: 700;
+        }
+
         /* Modal styles */
         .modal {
             display: none;
@@ -1311,6 +1407,7 @@
                 </div>
                 <span class="category-chevron" id="mealsChevron" style="font-size: 12px; transition: transform 0.3s; color: #999;">▼</span>
                 <div class="meals-header-buttons" style="margin-left: auto;">
+                    <button class="ai-suggest-btn" onclick="event.stopPropagation(); openAiSuggestModal()" title="Suggestions de plats de saison par IA">🤖 Plats de saison</button>
                     <button class="add-section-btn" onclick="event.stopPropagation(); openCreateSectionModal()" title="Nouvelle section">+ Section</button>
                     <button class="add-meal-btn" onclick="event.stopPropagation(); openMealModal()">+ Nouveau plat</button>
                 </div>
@@ -1441,6 +1538,31 @@
             <div class="modal-buttons">
                 <button class="modal-confirm" id="mealConfirmBtn" onclick="confirmMeal()">Créer le plat</button>
                 <button class="modal-cancel" onclick="closeMealModal()">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de suggestions de plats par IA -->
+    <div id="aiSuggestModal" class="modal">
+        <div class="modal-content ai-modal-content">
+            <div class="modal-header">🤖 Plats de saison</div>
+
+            <label class="ai-field-label" for="aiCount">Nombre de plats à proposer</label>
+            <input type="number" class="rename-input" id="aiCount" min="1" max="15" value="5" style="margin-bottom: 16px;">
+
+            <label class="ai-field-label" for="aiRecommendations">Recommandations (optionnel)</label>
+            <input type="text" class="rename-input" id="aiRecommendations"
+                   placeholder="Ex: plats asiatiques, du poisson, végétarien..."
+                   onkeydown="if(event.key==='Enter') generateAiSuggestions();"
+                   style="margin-bottom: 4px;">
+            <p class="ai-context-hint">Ces consignes sont ajoutées aux instructions de l'IA.</p>
+
+            <div id="aiStatus" class="ai-status" style="display:none;"></div>
+            <div id="aiResults" class="ai-results"></div>
+
+            <div class="modal-buttons">
+                <button class="modal-confirm" id="aiGenerateBtn" onclick="generateAiSuggestions()">✨ Générer</button>
+                <button class="modal-cancel" onclick="closeAiSuggestModal()">Fermer</button>
             </div>
         </div>
     </div>
@@ -1665,6 +1787,19 @@
                     </div>
                 </div>
 
+                <!-- Clé API Gemini (pour les suggestions IA) -->
+                <div style="background:#f6f4ff; padding:15px; border-radius:10px; margin-bottom:12px; border:2px solid #8e7cff;">
+                    <p style="margin:0 0 8px; color:#6a5acd; font-weight:600;">🤖 Clé API Gemini</p>
+                    <p style="font-size:12px; color:#666; margin:0 0 10px;">Nécessaire pour les suggestions de plats de saison. Stockée uniquement sur cet appareil.</p>
+                    <div style="display:flex; gap:8px;">
+                        <input type="password" id="geminiApiKeyInput" placeholder="Coller votre clé API..." autocomplete="off"
+                               style="flex:1; min-width:0; padding:10px; border:2px solid #e9ecef; border-radius:8px; font-size:14px;">
+                        <button onclick="saveGeminiApiKey()" class="modal-confirm" style="white-space:nowrap;">Enregistrer</button>
+                    </div>
+                    <p id="geminiKeyStatus" style="font-size:12px; margin:8px 0 0;"></p>
+                    <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="font-size:12px; color:#6a5acd;">Obtenir une clé →</a>
+                </div>
+
                 <!-- Test page link -->
                 <div id="testPageLink" style="display: none; background: #e3f2fd; padding: 15px; border-radius: 10px; margin-bottom: 12px; border: 2px solid #2196f3;">
                     <p style="margin-bottom: 10px; color: #1976d2; font-weight: 600;">🧪 Mode Développeur</p>
@@ -1841,6 +1976,7 @@
             const testPageLink = document.getElementById('testPageLink');
             testPageLink.style.display = currentUser ? 'block' : 'none';
             updateShareUI();
+            refreshGeminiKeyUI();
             // Charger la version
             fetch('public/version.json?' + Date.now())
                 .then(r => r.json())
@@ -3847,6 +3983,362 @@
                 articlesContent.classList.remove('collapsed');
                 if (chevron) chevron.classList.remove('collapsed');
             }
+        }
+
+        // ========================================
+        // SUGGESTIONS DE PLATS PAR IA (Gemini Flash)
+        // ========================================
+        const GEMINI_MODEL = 'gemini-2.0-flash';
+        let aiSuggestedDishes = []; // Dernière proposition de l'IA
+
+        // Génère un identifiant unique strictement croissant (évite les collisions Date.now())
+        let __lastGenId = 0;
+        function genId() {
+            let id = Date.now();
+            if (id <= __lastGenId) id = __lastGenId + 1;
+            __lastGenId = id;
+            return id;
+        }
+
+        function getGeminiApiKey() {
+            return (localStorage.getItem('geminiApiKey') || '').trim();
+        }
+
+        function saveGeminiApiKey() {
+            const input = document.getElementById('geminiApiKeyInput');
+            const key = input.value.trim();
+            if (key) {
+                localStorage.setItem('geminiApiKey', key);
+            } else {
+                localStorage.removeItem('geminiApiKey');
+            }
+            refreshGeminiKeyUI();
+        }
+
+        function refreshGeminiKeyUI() {
+            const status = document.getElementById('geminiKeyStatus');
+            const input = document.getElementById('geminiApiKeyInput');
+            if (!status || !input) return;
+            const key = getGeminiApiKey();
+            input.value = key;
+            if (key) {
+                status.textContent = '✅ Clé enregistrée';
+                status.style.color = '#28a745';
+            } else {
+                status.textContent = 'Aucune clé enregistrée';
+                status.style.color = '#888';
+            }
+        }
+
+        function openAiSuggestModal() {
+            aiSuggestedDishes = [];
+            document.getElementById('aiResults').innerHTML = '';
+            const status = document.getElementById('aiStatus');
+            status.style.display = 'none';
+            status.className = 'ai-status';
+
+            if (!getGeminiApiKey()) {
+                status.style.display = 'block';
+                status.className = 'ai-status ai-error';
+                status.textContent = '⚠️ Aucune clé API Gemini. Ajoutez-la dans ⚙️ Paramètres.';
+            }
+            document.getElementById('aiSuggestModal').classList.add('show');
+        }
+
+        function closeAiSuggestModal() {
+            document.getElementById('aiSuggestModal').classList.remove('show');
+        }
+
+        // Récupère la position GPS (ou null si refusée/indisponible)
+        function getGeoPosition(timeoutMs) {
+            return new Promise(resolve => {
+                if (!navigator.geolocation) return resolve(null);
+                let done = false;
+                const finish = (v) => { if (!done) { done = true; resolve(v); } };
+                const timer = setTimeout(() => finish(null), timeoutMs);
+                navigator.geolocation.getCurrentPosition(
+                    pos => { clearTimeout(timer); finish(pos); },
+                    () => { clearTimeout(timer); finish(null); },
+                    { timeout: timeoutMs, maximumAge: 600000 }
+                );
+            });
+        }
+
+        // Construit le contexte saison + lieu + température (best-effort)
+        async function getSeasonContext() {
+            const now = new Date();
+            const monthName = now.toLocaleDateString('fr-FR', { month: 'long' });
+            const ctx = { monthName, season: '', locationName: '', temperature: null };
+
+            let lat = null, lon = null;
+            const pos = await getGeoPosition(8000);
+            if (pos && pos.coords) {
+                lat = pos.coords.latitude;
+                lon = pos.coords.longitude;
+            }
+
+            // Saison (par défaut hémisphère nord ; inversée si latitude négative)
+            const m = now.getMonth(); // 0-11
+            const northSeasons = ['hiver','hiver','printemps','printemps','printemps','été','été','été','automne','automne','automne','hiver'];
+            let season = northSeasons[m];
+            if (lat !== null && lat < 0) {
+                const swap = { 'hiver':'été', 'été':'hiver', 'printemps':'automne', 'automne':'printemps' };
+                season = swap[season];
+            }
+            ctx.season = season;
+
+            if (lat !== null && lon !== null) {
+                try {
+                    const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m`);
+                    if (wRes.ok) {
+                        const w = await wRes.json();
+                        if (w && w.current && typeof w.current.temperature_2m === 'number') {
+                            ctx.temperature = w.current.temperature_2m;
+                        }
+                    }
+                } catch (e) { /* météo indisponible — on continue */ }
+                try {
+                    const gRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=fr`);
+                    if (gRes.ok) {
+                        const g = await gRes.json();
+                        ctx.locationName = [g.city || g.locality, g.countryName].filter(Boolean).join(', ');
+                    }
+                } catch (e) { /* géocodage indisponible — on continue */ }
+            }
+
+            return ctx;
+        }
+
+        // Inventaire actuel : sections, articles existants, plats existants
+        function buildAiContext() {
+            const sections = articleSectionOrder
+                .filter(key => articleSections[key])
+                .map(key => ({ key, name: articleSections[key].name }));
+
+            const itemsBySection = {};
+            articleSectionOrder.forEach(key => {
+                const items = (groceryList[key] || []).map(i => i.name);
+                if (items.length) itemsBySection[articleSections[key] ? articleSections[key].name : key] = items;
+            });
+
+            const existingMeals = mealOrder
+                .map(id => meals[id] && meals[id].name)
+                .filter(Boolean);
+
+            return { sections, itemsBySection, existingMeals };
+        }
+
+        async function generateAiSuggestions() {
+            const status = document.getElementById('aiStatus');
+            const resultsEl = document.getElementById('aiResults');
+            const genBtn = document.getElementById('aiGenerateBtn');
+
+            const apiKey = getGeminiApiKey();
+            if (!apiKey) {
+                status.style.display = 'block';
+                status.className = 'ai-status ai-error';
+                status.textContent = '⚠️ Aucune clé API Gemini. Ajoutez-la dans ⚙️ Paramètres.';
+                return;
+            }
+
+            let count = parseInt(document.getElementById('aiCount').value, 10);
+            if (isNaN(count) || count < 1) count = 5;
+            if (count > 15) count = 15;
+            const recommendations = document.getElementById('aiRecommendations').value.trim();
+
+            resultsEl.innerHTML = '';
+            aiSuggestedDishes = [];
+            genBtn.disabled = true;
+            status.style.display = 'block';
+            status.className = 'ai-status';
+            status.textContent = '📍 Détection de la saison et du lieu...';
+
+            try {
+                const season = await getSeasonContext();
+                status.textContent = '🤖 Gemini réfléchit à vos plats de saison...';
+
+                const ctx = buildAiContext();
+                const sectionsList = ctx.sections.map(s => `${s.key} (${s.name})`).join(', ');
+                const inventoryLines = Object.keys(ctx.itemsBySection)
+                    .map(secName => `- ${secName}: ${ctx.itemsBySection[secName].join(', ')}`)
+                    .join('\n') || '(aucun article)';
+                const mealsLine = ctx.existingMeals.length ? ctx.existingMeals.join(', ') : '(aucun plat)';
+
+                let locationLine = '';
+                if (season.locationName) locationLine += `Lieu : ${season.locationName}. `;
+                if (season.temperature !== null) locationLine += `Température actuelle : ${Math.round(season.temperature)}°C. `;
+                if (!locationLine) locationLine = 'Localisation non disponible.';
+
+                const prompt = [
+                    `Tu es un assistant culinaire qui propose des idées de plats adaptés à la saison.`,
+                    `Nous sommes en ${season.monthName} (saison : ${season.season}). ${locationLine}`,
+                    `Propose exactement ${count} idées de plats DIFFÉRENTS, adaptés à la saison et à la température, en privilégiant les fruits et légumes de saison de cette région.`,
+                    ``,
+                    `Plats DÉJÀ existants (ne les propose pas à nouveau) : ${mealsLine}.`,
+                    ``,
+                    `Articles déjà disponibles dans la liste de courses :`,
+                    inventoryLines,
+                    ``,
+                    `Pour chaque plat, donne la liste des ingrédients nécessaires. Réutilise EXACTEMENT le nom des articles déjà disponibles quand c'est pertinent.`,
+                    `Pour chaque ingrédient, indique une catégorie parmi ces clés EXACTES : ${sectionsList}. Si rien ne correspond, utilise "autre".`,
+                    recommendations ? `\nConsignes supplémentaires de l'utilisateur (à respecter en priorité) : ${recommendations}` : ``,
+                    `\nRéponds uniquement en français.`
+                ].join('\n');
+
+                const schema = {
+                    type: 'OBJECT',
+                    properties: {
+                        dishes: {
+                            type: 'ARRAY',
+                            items: {
+                                type: 'OBJECT',
+                                properties: {
+                                    name: { type: 'STRING' },
+                                    ingredients: {
+                                        type: 'ARRAY',
+                                        items: {
+                                            type: 'OBJECT',
+                                            properties: {
+                                                name: { type: 'STRING' },
+                                                category: { type: 'STRING' }
+                                            },
+                                            required: ['name', 'category']
+                                        }
+                                    }
+                                },
+                                required: ['name', 'ingredients']
+                            }
+                        }
+                    },
+                    required: ['dishes']
+                };
+
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+                        generationConfig: {
+                            temperature: 0.9,
+                            responseMimeType: 'application/json',
+                            responseSchema: schema
+                        }
+                    })
+                });
+
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error((data && data.error && data.error.message) || `Erreur HTTP ${res.status}`);
+                }
+
+                const text = data && data.candidates && data.candidates[0]
+                    && data.candidates[0].content && data.candidates[0].content.parts
+                    && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text;
+                if (!text) throw new Error('Réponse vide de Gemini.');
+
+                const parsed = JSON.parse(text);
+                const dishes = Array.isArray(parsed.dishes) ? parsed.dishes : [];
+                if (!dishes.length) throw new Error('Aucun plat proposé.');
+
+                aiSuggestedDishes = dishes;
+                let contextLabel = `${season.monthName} · ${season.season}`;
+                if (season.locationName) contextLabel += ` · ${season.locationName}`;
+                if (season.temperature !== null) contextLabel += ` · ${Math.round(season.temperature)}°C`;
+                status.style.display = 'none';
+                renderAiSuggestions(contextLabel);
+            } catch (err) {
+                console.error('❌ Erreur suggestions IA:', err);
+                status.style.display = 'block';
+                status.className = 'ai-status ai-error';
+                status.textContent = '⚠️ ' + (err.message || 'Échec de la génération.');
+            } finally {
+                genBtn.disabled = false;
+            }
+        }
+
+        // Cherche un article existant par nom (insensible accents/casse) ; renvoie {category, itemId} ou null
+        function findExistingItem(name) {
+            const target = normalizeSearch(name);
+            if (!target) return null;
+            for (const cat of Object.keys(groceryList)) {
+                const found = (groceryList[cat] || []).find(i => normalizeSearch(i.name) === target);
+                if (found) return { category: cat, itemId: found.id };
+            }
+            return null;
+        }
+
+        function renderAiSuggestions(contextLabel) {
+            const resultsEl = document.getElementById('aiResults');
+            let html = `<p class="ai-context-hint" style="margin-top:0;">Proposition pour : ${escapeHtml(contextLabel)}</p>`;
+            aiSuggestedDishes.forEach((dish, idx) => {
+                const chips = (dish.ingredients || []).map(ing => {
+                    const exists = !!findExistingItem(ing.name);
+                    return `<span class="ai-ing-chip ${exists ? '' : 'is-new'}">${escapeHtml(ing.name)}</span>`;
+                }).join('');
+                html += `
+                    <div class="ai-dish-card" id="ai-dish-${idx}">
+                        <div class="ai-dish-head">
+                            <span class="ai-dish-name">${escapeHtml(dish.name)}</span>
+                            <button class="ai-dish-add-btn" id="ai-add-btn-${idx}" onclick="addAiDish(${idx})">+ Ajouter</button>
+                        </div>
+                        <div class="ai-ingredients">${chips}</div>
+                    </div>`;
+            });
+            html += `<p class="ai-context-hint">✚ = nouvel article qui sera créé.</p>`;
+            resultsEl.innerHTML = html;
+        }
+
+        // Valide et crée un plat proposé : articles manquants + plat, puis sync Firestore
+        function addAiDish(idx) {
+            const dish = aiSuggestedDishes[idx];
+            if (!dish) return;
+
+            const validKeys = new Set(articleSectionOrder.filter(k => articleSections[k]));
+            const fallbackCat = articleSections['autre'] ? 'autre' : (articleSectionOrder[0] || 'autre');
+            if (!articleSections[fallbackCat]) {
+                // Sécurité : crée une section "Autre" si aucune n'existe
+                articleSections['autre'] = { name: 'Autre', icon: '📦' };
+                if (!articleSectionOrder.includes('autre')) articleSectionOrder.push('autre');
+            }
+
+            const ingredientRefs = [];
+            (dish.ingredients || []).forEach(ing => {
+                if (!ing || !ing.name || !ing.name.trim()) return;
+                const existing = findExistingItem(ing.name);
+                if (existing) {
+                    ingredientRefs.push(existing);
+                    return;
+                }
+                let cat = (ing.category || '').trim();
+                if (!validKeys.has(cat)) cat = fallbackCat;
+                if (!groceryList[cat]) groceryList[cat] = [];
+                const newItem = { name: ing.name.trim(), checked: false, id: genId() };
+                groceryList[cat].push(newItem);
+                ingredientRefs.push({ category: cat, itemId: newItem.id });
+            });
+
+            if (!ingredientRefs.length) {
+                alert('Ce plat ne contient aucun ingrédient valide.');
+                return;
+            }
+
+            const mealId = genId();
+            meals[mealId] = {
+                name: dish.name.trim(),
+                ingredients: ingredientRefs,
+                selected: false
+            };
+            mealOrder.push(String(mealId));
+
+            saveToLocalStorage();
+            renderCategories();
+            renderMeals();
+
+            // Marque la carte comme ajoutée
+            const card = document.getElementById('ai-dish-' + idx);
+            const btn = document.getElementById('ai-add-btn-' + idx);
+            if (card) card.classList.add('added');
+            if (btn) { btn.disabled = true; btn.textContent = '✓ Ajouté'; }
         }
 
         function openMealModal() {
