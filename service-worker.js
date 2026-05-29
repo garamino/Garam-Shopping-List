@@ -4,7 +4,8 @@ const urlsToCache = [
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
-  './version.json'
+  './version.json',
+  './vendor/Sortable.min.js'
 ];
 
 // Installation du Service Worker

@@ -1821,6 +1821,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="vendor/Sortable.min.js"></script>
 
     <script>
         // ========================================
@@ -3312,10 +3313,9 @@
             return `
                 <div class="meal-item ${meal.selected ? 'selected' : ''}"
                      id="meal-${mealId}"
-                     draggable="true"
                      data-meal-id="${mealId}"
                      data-section-id="${meal.sectionId || ''}">
-                    <span class="drag-handle" style="cursor: grab; color: #adb5bd; margin-right: 8px;">⋮⋮</span>
+                    <span class="drag-handle">⋮⋮</span>
                     <input type="checkbox" class="meal-checkbox"
                            ${meal.selected ? 'checked' : ''}
                            onchange="toggleMeal('${mealId}')">
@@ -3409,11 +3409,11 @@
                 const isCollapsed = mealSearchTerm ? false : (collapsedMealSections[sectionId] || false);
 
                 html += `
-                    <div class="meal-section" data-section-id="${sectionId}" draggable="true">
+                    <div class="meal-section" data-section-id="${sectionId}">
                         <div class="meal-section-header ${isCollapsed ? 'collapsed' : ''}"
                              data-section-id="${sectionId}"
                              onclick="toggleMealSection('${sectionId}')">
-                            <span class="drag-handle" style="cursor: grab; color: #adb5bd;"
+                            <span class="section-drag-handle"
                                   onmousedown="event.stopPropagation()">⋮⋮</span>
                             <span class="meal-section-title">${escapeHtml(section.icon || '📁')} ${escapeHtml(section.name)}</span>
                             <span class="meal-section-count">${sectionMeals.length}</span>
@@ -3459,7 +3459,10 @@
         function toggleMealsSection() {
             mealsCollapsed = !mealsCollapsed;
             saveCollapseState();
-            updateMealsCollapseState();
+            const chevron = document.getElementById('mealsChevron');
+            if (chevron) chevron.classList.toggle('collapsed', mealsCollapsed);
+            animatePanel(document.getElementById('mealsControls'), mealsCollapsed);
+            animatePanel(document.getElementById('mealsList'), mealsCollapsed);
         }
 
         function updateMealsCollapseState() {
@@ -3629,15 +3632,10 @@
             if (header) {
                 const itemsList = header.nextElementSibling;
                 const chevron = header.querySelector('.category-chevron');
-                if (collapsedMealSections[sectionId]) {
-                    header.classList.add('collapsed');
-                    if (itemsList) itemsList.classList.add('collapsed');
-                    if (chevron) chevron.classList.add('collapsed');
-                } else {
-                    header.classList.remove('collapsed');
-                    if (itemsList) itemsList.classList.remove('collapsed');
-                    if (chevron) chevron.classList.remove('collapsed');
-                }
+                const willCollapse = collapsedMealSections[sectionId];
+                header.classList.toggle('collapsed', willCollapse);
+                if (chevron) chevron.classList.toggle('collapsed', willCollapse);
+                animatePanel(itemsList, willCollapse);
             }
         }
 
@@ -3841,6 +3839,38 @@
             }
         }
 
+        // Anime un panneau repliable vers sa hauteur RÉELLE (scrollHeight) au lieu
+        // d'un max-height fixe surdimensionné. Sans ça, l'animation passe l'essentiel
+        // de sa durée à parcourir du vide → effet de "lag" puis fermeture brutale.
+        function animatePanel(panel, willCollapse) {
+            if (!panel) return;
+            panel.style.willChange = 'max-height, opacity';
+            const onEnd = (e) => {
+                if (e.propertyName !== 'max-height') return;
+                panel.style.maxHeight = '';
+                panel.style.opacity = '';
+                panel.style.willChange = '';
+                panel.removeEventListener('transitionend', onEnd);
+            };
+            panel.addEventListener('transitionend', onEnd);
+
+            if (willCollapse) {
+                panel.style.maxHeight = panel.scrollHeight + 'px';
+                panel.style.opacity = '1';
+                void panel.offsetHeight; // reflow forcé
+                panel.classList.add('collapsed');
+                panel.style.maxHeight = '0px';
+                panel.style.opacity = '0';
+            } else {
+                panel.classList.remove('collapsed');
+                panel.style.maxHeight = '0px';
+                panel.style.opacity = '0';
+                void panel.offsetHeight; // reflow forcé
+                panel.style.maxHeight = panel.scrollHeight + 'px';
+                panel.style.opacity = '1';
+            }
+        }
+
         function toggleArticleSection(sectionKey) {
             collapsedCategories[sectionKey] = !collapsedCategories[sectionKey];
             saveCollapseState();
@@ -3849,15 +3879,10 @@
             if (header) {
                 const itemsList = header.nextElementSibling;
                 const chevron = header.querySelector('.category-chevron');
-                if (collapsedCategories[sectionKey]) {
-                    header.classList.add('collapsed');
-                    if (itemsList) itemsList.classList.add('collapsed');
-                    if (chevron) chevron.classList.add('collapsed');
-                } else {
-                    header.classList.remove('collapsed');
-                    if (itemsList) itemsList.classList.remove('collapsed');
-                    if (chevron) chevron.classList.remove('collapsed');
-                }
+                const willCollapse = collapsedCategories[sectionKey];
+                header.classList.toggle('collapsed', willCollapse);
+                if (chevron) chevron.classList.toggle('collapsed', willCollapse);
+                animatePanel(itemsList, willCollapse);
             }
         }
 
@@ -3892,84 +3917,36 @@
             }
         }
 
-        let draggedArticleSection = null;
+        // Réordonnancement des sections d'articles (SortableJS)
+        let articleSectionSortable = null;
 
         function initializeArticleSectionDragAndDrop() {
-            const sectionElements = document.querySelectorAll('[data-article-section-id][draggable="true"]');
-            sectionElements.forEach(section => {
-                section.addEventListener('dragstart', handleArticleSectionDragStart);
-                section.addEventListener('dragend', handleArticleSectionDragEnd);
-                section.addEventListener('dragover', handleArticleSectionDragOver);
-                section.addEventListener('drop', handleArticleSectionDrop);
-                section.addEventListener('dragleave', handleArticleSectionDragLeave);
-            });
-        }
-
-        function handleArticleSectionDragStart(e) {
-            if (draggedItem) return;
-            const handle = e.target.closest('.drag-handle');
-            const section = e.target.closest('[data-article-section-id]');
-            if (!handle || !section) {
-                e.preventDefault();
-                return;
-            }
-            draggedArticleSection = section;
-            section.classList.add('dragging-section');
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', 'article-section');
-        }
-
-        function handleArticleSectionDragEnd(e) {
-            if (draggedArticleSection) {
-                draggedArticleSection.classList.remove('dragging-section');
-                draggedArticleSection = null;
-            }
-            document.querySelectorAll('[data-article-section-id]').forEach(s => {
-                s.classList.remove('drag-over-section');
-            });
-        }
-
-        function handleArticleSectionDragOver(e) {
-            if (!draggedArticleSection) return;
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-            const section = e.target.closest('[data-article-section-id]');
-            if (section && section !== draggedArticleSection) {
-                section.classList.add('drag-over-section');
-            }
-        }
-
-        function handleArticleSectionDragLeave(e) {
-            if (!draggedArticleSection) return;
-            const section = e.target.closest('[data-article-section-id]');
-            if (section) section.classList.remove('drag-over-section');
-        }
-
-        function handleArticleSectionDrop(e) {
-            if (!draggedArticleSection) return;
-            e.stopPropagation();
-            const targetSection = e.target.closest('[data-article-section-id]');
-            if (targetSection && draggedArticleSection !== targetSection) {
-                const draggedId = draggedArticleSection.dataset.articleSectionId;
-                const targetId = targetSection.dataset.articleSectionId;
-
-                const draggedIndex = articleSectionOrder.indexOf(draggedId);
-                const targetIndex = articleSectionOrder.indexOf(targetId);
-
-                if (draggedIndex > -1 && targetIndex > -1) {
-                    articleSectionOrder.splice(draggedIndex, 1);
-                    articleSectionOrder.splice(targetIndex, 0, draggedId);
+            if (typeof Sortable === 'undefined') return;
+            if (articleSectionSortable) { try { articleSectionSortable.destroy(); } catch (e) {} articleSectionSortable = null; }
+            const container = document.getElementById('categoriesContainer');
+            if (!container) return;
+            articleSectionSortable = Sortable.create(container, {
+                ...SORTABLE_BASE,
+                handle: '.section-drag-handle',
+                draggable: '.category[data-article-section-id]',
+                onEnd(evt) {
+                    const movedId = evt.item.dataset.articleSectionId;
+                    const siblings = [...container.querySelectorAll(':scope > .category[data-article-section-id]')];
+                    const i = siblings.indexOf(evt.item);
+                    const beforeId = (i > -1 && i + 1 < siblings.length) ? siblings[i + 1].dataset.articleSectionId : null;
+                    reorderArrayByNeighbor(articleSectionOrder, movedId, beforeId);
                     saveToLocalStorage();
                     renderCategories();
                 }
-            }
-            return false;
+            });
         }
 
         function toggleArticlesSection() {
             articlesCollapsed = !articlesCollapsed;
             saveCollapseState();
-            updateArticlesCollapseState();
+            const chevron = document.getElementById('articlesChevron');
+            if (chevron) chevron.classList.toggle('collapsed', articlesCollapsed);
+            animatePanel(document.getElementById('articlesContent'), articlesCollapsed);
         }
 
         function updateArticlesCollapseState() {
@@ -4835,7 +4812,6 @@
         function renderItemsHtml(items, categoryKey) {
             return items.map(item => `
                 <div class="item ${item.checked ? 'checked' : ''}"
-                     draggable="true"
                      data-item-id="${item.id}"
                      data-category="${categoryKey}">
                     <span class="drag-handle">⋮⋮</span>
@@ -4912,14 +4888,13 @@
                     const categoryDiv = document.createElement('div');
                     categoryDiv.className = 'category';
                     categoryDiv.setAttribute('data-article-section-id', sectionKey);
-                    categoryDiv.setAttribute('draggable', 'true');
 
                     // When searching: expand sections with results, collapse those without
                     const isCollapsed = isSearching ? !hasResults : (collapsedCategories[sectionKey] || false);
 
                     categoryDiv.innerHTML = `
                         <div class="category-header ${isCollapsed ? 'collapsed' : ''}" data-section-id="${sectionKey}" onclick="toggleArticleSection('${sectionKey}')">
-                            <span class="drag-handle" style="cursor: grab; color: #adb5bd;" onmousedown="event.stopPropagation()">⋮⋮</span>
+                            <span class="section-drag-handle" onmousedown="event.stopPropagation()">⋮⋮</span>
                             <span class="category-icon">${escapeHtml(section.icon || '📁')}</span>
                             <span class="category-title">${escapeHtml(section.name)}</span>
                             <span class="category-count">${filteredItems.length}</span>
@@ -5008,280 +4983,140 @@
             document.getElementById('remainingItems').textContent = total - checked;
         }
 
-        // Drag and Drop functionality
-        let draggedItem = null;
+        // ============================================
+        // DRAG & DROP (SortableJS — tactile + souris)
+        // ============================================
+        // Options communes : poignée dédiée, support tactile (delay sur touch
+        // pour ne pas gêner le scroll), auto-scroll, animation fluide.
+        const SORTABLE_BASE = {
+            animation: 150,
+            easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+            handle: '.drag-handle',
+            delay: 120,
+            delayOnTouchOnly: true,
+            touchStartThreshold: 5,
+            fallbackTolerance: 5,
+            forceFallback: true,   // rendu cohérent du ghost sur tous les navigateurs
+            scroll: true,
+            scrollSensitivity: 60,
+            scrollSpeed: 12
+        };
+
+        let itemSortables = [];
+
+        function destroySortables(list) {
+            list.forEach(s => { try { s.destroy(); } catch (e) {} });
+            list.length = 0;
+        }
+
+        // Renvoie l'id de l'élément .item qui suit `el` dans son conteneur (anchor),
+        // ou null si `el` est en dernier. Sûr même quand un filtre masque des items.
+        function nextDatasetId(el, selector, attr) {
+            const siblings = [...el.parentElement.querySelectorAll(':scope > ' + selector)];
+            const i = siblings.indexOf(el);
+            return (i > -1 && i + 1 < siblings.length) ? siblings[i + 1].dataset[attr] : null;
+        }
+
+        // Déplace l'objet article de fromCat vers toCat, inséré avant beforeId
+        // (ou en fin si beforeId est null). Préserve l'objet et reste correct
+        // même sous filtre/recherche (ancrage par id voisin réel).
+        function moveItemObject(fromCat, toCat, movedId, beforeId) {
+            const fromArr = groceryList[fromCat];
+            if (!fromArr) return;
+            const i = fromArr.findIndex(x => String(x.id) === String(movedId));
+            if (i < 0) return;
+            const [obj] = fromArr.splice(i, 1);
+            if (!groceryList[toCat]) groceryList[toCat] = [];
+            const toArr = groceryList[toCat];
+            if (beforeId == null) {
+                toArr.push(obj);
+            } else {
+                const j = toArr.findIndex(x => String(x.id) === String(beforeId));
+                if (j < 0) toArr.push(obj); else toArr.splice(j, 0, obj);
+            }
+        }
 
         function initializeDragAndDrop() {
-            const items = document.querySelectorAll('.item[draggable="true"]');
-            
-            items.forEach(item => {
-                item.addEventListener('dragstart', handleDragStart);
-                item.addEventListener('dragend', handleDragEnd);
-                item.addEventListener('dragover', handleDragOver);
-                item.addEventListener('drop', handleDrop);
-                item.addEventListener('dragleave', handleDragLeave);
+            if (typeof Sortable === 'undefined') return;
+            destroySortables(itemSortables);
+            document.querySelectorAll('.items-list').forEach(list => {
+                itemSortables.push(Sortable.create(list, {
+                    ...SORTABLE_BASE,
+                    group: 'articles',
+                    draggable: '.item',
+                    onEnd(evt) {
+                        const movedId = evt.item.dataset.itemId;
+                        const fromCat = evt.from.dataset.category;
+                        const toCat = evt.to.dataset.category;
+                        const beforeId = nextDatasetId(evt.item, '.item', 'itemId');
+                        moveItemObject(fromCat, toCat, movedId, beforeId);
+                        saveToLocalStorage();
+                        renderCategories();
+                    }
+                }));
             });
         }
 
-        function handleDragStart(e) {
-            draggedItem = e.target;
-            e.target.classList.add('dragging');
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/html', e.target.innerHTML);
+        // Réordonne un tableau d'ids en plaçant movedId juste avant beforeId
+        // (ou en fin si beforeId est null). Les ids non concernés ne bougent pas,
+        // donc reste correct même si la recherche masque certains éléments.
+        function reorderArrayByNeighbor(arr, movedId, beforeId) {
+            const i = arr.indexOf(movedId);
+            if (i < 0) return;
+            arr.splice(i, 1);
+            if (beforeId == null) { arr.push(movedId); return; }
+            const j = arr.indexOf(beforeId);
+            if (j < 0) arr.push(movedId); else arr.splice(j, 0, movedId);
         }
 
-        function handleDragEnd(e) {
-            e.target.classList.remove('dragging');
-            document.querySelectorAll('.item').forEach(item => {
-                item.classList.remove('drag-over');
-            });
-        }
-
-        function handleDragOver(e) {
-            if (e.preventDefault) {
-                e.preventDefault();
-            }
-            e.dataTransfer.dropEffect = 'move';
-            
-            if (e.target.classList.contains('item')) {
-                e.target.classList.add('drag-over');
-            }
-            
-            return false;
-        }
-
-        function handleDragLeave(e) {
-            if (e.target.classList.contains('item')) {
-                e.target.classList.remove('drag-over');
-            }
-        }
-
-        function handleDrop(e) {
-            if (e.stopPropagation) {
-                e.stopPropagation();
-            }
-
-            const target = e.target.closest('.item');
-            if (draggedItem && target && draggedItem !== target) {
-                const draggedCategory = draggedItem.dataset.category;
-                const draggedItemId = parseInt(draggedItem.dataset.itemId);
-                const targetCategory = target.dataset.category;
-                const targetItemId = parseInt(target.dataset.itemId);
-
-                // Find items
-                const draggedItemIndex = groceryList[draggedCategory].findIndex(item => item.id === draggedItemId);
-                const targetItemIndex = groceryList[targetCategory].findIndex(item => item.id === targetItemId);
-
-                if (draggedCategory === targetCategory) {
-                    // Reorder within same category
-                    const [removed] = groceryList[draggedCategory].splice(draggedItemIndex, 1);
-                    groceryList[draggedCategory].splice(targetItemIndex, 0, removed);
-                } else {
-                    // Move to different category
-                    const [removed] = groceryList[draggedCategory].splice(draggedItemIndex, 1);
-                    groceryList[targetCategory].splice(targetItemIndex, 0, removed);
-                }
-
-                saveToLocalStorage();
-                renderCategories();
-            }
-
-            return false;
-        }
-
-        // Drag and drop for meals (with section support)
-        let draggedMeal = null;
-        let draggedSection = null;
+        // Drag & drop des plats et sections de plats (SortableJS)
+        let mealSortables = [];
 
         function initializeMealsDragAndDrop() {
-            // Meal items drag & drop
-            const mealItems = document.querySelectorAll('.meal-item[draggable="true"]');
-            mealItems.forEach(item => {
-                item.addEventListener('dragstart', handleMealDragStart);
-                item.addEventListener('dragend', handleMealDragEnd);
-                item.addEventListener('dragover', handleMealDragOver);
-                item.addEventListener('drop', handleMealDrop);
-                item.addEventListener('dragleave', handleMealDragLeave);
-            });
+            if (typeof Sortable === 'undefined') return;
+            destroySortables(mealSortables);
 
-            // Section containers as drop targets
-            const sectionContainers = document.querySelectorAll('.meal-section-items');
-            sectionContainers.forEach(container => {
-                container.addEventListener('dragover', function(e) {
-                    if (!draggedMeal || draggedSection) return;
-                    e.preventDefault();
-                    e.dataTransfer.dropEffect = 'move';
-                    const section = this.closest('.meal-section');
-                    if (section) section.classList.add('drag-over-section');
-                });
-                container.addEventListener('drop', function(e) {
-                    if (!draggedMeal || draggedSection) return;
-                    e.stopPropagation();
-                    const targetSectionId = this.dataset.sectionId;
-                    const draggedMealId = draggedMeal.dataset.mealId;
-                    if (targetSectionId) {
-                        meals[draggedMealId].sectionId = targetSectionId;
-                    } else {
-                        delete meals[draggedMealId].sectionId;
+            // Plats : déplaçables entre la zone "sans section" et chaque section
+            document.querySelectorAll('.meal-unsectioned, .meal-section-items').forEach(container => {
+                mealSortables.push(Sortable.create(container, {
+                    ...SORTABLE_BASE,
+                    group: 'meals',
+                    draggable: '.meal-item',
+                    onEnd(evt) {
+                        const movedId = evt.item.dataset.mealId;
+                        const toSectionId = evt.to.dataset.sectionId;
+                        if (toSectionId) meals[movedId].sectionId = toSectionId;
+                        else delete meals[movedId].sectionId;
+
+                        const order = getOrderedMealKeys();
+                        const allEls = [...document.getElementById('mealsList').querySelectorAll('.meal-item')];
+                        const idx = allEls.indexOf(evt.item);
+                        const beforeId = (idx > -1 && idx + 1 < allEls.length) ? allEls[idx + 1].dataset.mealId : null;
+                        reorderArrayByNeighbor(order, movedId, beforeId);
+                        mealOrder = order;
+
+                        saveToLocalStorage();
+                        renderMeals();
                     }
-                    saveToLocalStorage();
-                    renderMeals();
-                });
-                container.addEventListener('dragleave', function(e) {
-                    const section = this.closest('.meal-section');
-                    if (section) section.classList.remove('drag-over-section');
-                });
+                }));
             });
 
-            // Section drag & drop (reorder sections)
-            const sectionElements = document.querySelectorAll('.meal-section[draggable="true"]');
-            sectionElements.forEach(section => {
-                section.addEventListener('dragstart', handleSectionDragStart);
-                section.addEventListener('dragend', handleSectionDragEnd);
-                section.addEventListener('dragover', handleSectionDragOver);
-                section.addEventListener('drop', handleSectionDrop);
-                section.addEventListener('dragleave', handleSectionDragLeave);
-            });
-        }
-
-        function handleMealDragStart(e) {
-            const mealItem = e.target.closest('.meal-item');
-            if (!mealItem) return;
-            draggedMeal = mealItem;
-            draggedSection = null;
-            mealItem.classList.add('dragging');
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', 'meal');
-            e.stopPropagation();
-        }
-
-        function handleMealDragEnd(e) {
-            if (draggedMeal) {
-                draggedMeal.classList.remove('dragging');
-                draggedMeal = null;
+            // Sections de plats : réordonnables via leur poignée d'en-tête
+            const mealsList = document.getElementById('mealsList');
+            if (mealsList) {
+                mealSortables.push(Sortable.create(mealsList, {
+                    ...SORTABLE_BASE,
+                    handle: '.section-drag-handle',
+                    draggable: '.meal-section',
+                    onEnd(evt) {
+                        const movedId = evt.item.dataset.sectionId;
+                        const beforeId = nextDatasetId(evt.item, '.meal-section', 'sectionId');
+                        reorderArrayByNeighbor(mealSectionOrder, movedId, beforeId);
+                        saveToLocalStorage();
+                        renderMeals();
+                    }
+                }));
             }
-            document.querySelectorAll('.meal-item').forEach(item => {
-                item.classList.remove('drag-over');
-            });
-            document.querySelectorAll('.meal-section').forEach(s => {
-                s.classList.remove('drag-over-section');
-            });
-        }
-
-        function handleMealDragOver(e) {
-            if (!draggedMeal || draggedSection) return;
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-
-            const mealItem = e.target.closest('.meal-item');
-            if (mealItem && mealItem !== draggedMeal) {
-                mealItem.classList.add('drag-over');
-            }
-            return false;
-        }
-
-        function handleMealDragLeave(e) {
-            const mealItem = e.target.closest('.meal-item');
-            if (mealItem) {
-                mealItem.classList.remove('drag-over');
-            }
-        }
-
-        function handleMealDrop(e) {
-            if (!draggedMeal || draggedSection) return;
-            e.stopPropagation();
-
-            const target = e.target.closest('.meal-item');
-            if (draggedMeal && target && draggedMeal !== target) {
-                const draggedMealId = draggedMeal.dataset.mealId;
-                const targetMealId = target.dataset.mealId;
-                const targetSectionId = target.dataset.sectionId || null;
-
-                // Move meal to target's section
-                if (targetSectionId) {
-                    meals[draggedMealId].sectionId = targetSectionId;
-                } else {
-                    delete meals[draggedMealId].sectionId;
-                }
-
-                // Reorder within mealOrder
-                const orderedKeys = getOrderedMealKeys();
-                const draggedIndex = orderedKeys.indexOf(draggedMealId);
-                const targetIndex = orderedKeys.indexOf(targetMealId);
-
-                if (draggedIndex > -1 && targetIndex > -1) {
-                    const [removed] = orderedKeys.splice(draggedIndex, 1);
-                    orderedKeys.splice(targetIndex, 0, removed);
-                    mealOrder = orderedKeys;
-                }
-
-                saveToLocalStorage();
-                renderMeals();
-            }
-            return false;
-        }
-
-        // Section reorder drag & drop
-        function handleSectionDragStart(e) {
-            if (draggedMeal) return; // A meal is being dragged, not a section
-            const handle = e.target.closest('.drag-handle');
-            const section = e.target.closest('.meal-section');
-            if (!handle || !section) {
-                e.preventDefault();
-                return;
-            }
-            draggedSection = section;
-            draggedMeal = null;
-            section.classList.add('dragging-section');
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', 'section');
-        }
-
-        function handleSectionDragEnd(e) {
-            if (draggedSection) {
-                draggedSection.classList.remove('dragging-section');
-                draggedSection = null;
-            }
-            document.querySelectorAll('.meal-section').forEach(s => {
-                s.classList.remove('drag-over-section');
-            });
-        }
-
-        function handleSectionDragOver(e) {
-            if (!draggedSection) return;
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-            const section = e.target.closest('.meal-section');
-            if (section && section !== draggedSection) {
-                section.classList.add('drag-over-section');
-            }
-        }
-
-        function handleSectionDragLeave(e) {
-            if (!draggedSection) return;
-            const section = e.target.closest('.meal-section');
-            if (section) section.classList.remove('drag-over-section');
-        }
-
-        function handleSectionDrop(e) {
-            if (!draggedSection) return;
-            e.stopPropagation();
-            const targetSection = e.target.closest('.meal-section');
-            if (targetSection && draggedSection !== targetSection) {
-                const draggedId = draggedSection.dataset.sectionId;
-                const targetId = targetSection.dataset.sectionId;
-
-                const draggedIndex = mealSectionOrder.indexOf(draggedId);
-                const targetIndex = mealSectionOrder.indexOf(targetId);
-
-                if (draggedIndex > -1 && targetIndex > -1) {
-                    mealSectionOrder.splice(draggedIndex, 1);
-                    mealSectionOrder.splice(targetIndex, 0, draggedId);
-                    saveToLocalStorage();
-                    renderMeals();
-                }
-            }
-            return false;
         }
 
         // Event Listeners
