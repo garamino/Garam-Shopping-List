@@ -2443,17 +2443,31 @@
         function subscribeToSharedList(listId) {
             if (listUnsubscribe) listUnsubscribe();
 
+            // Reset du gate : on attend un fresh snapshot serveur pour cette nouvelle liste
+            // avant d'autoriser quelque écriture que ce soit dessus.
+            serverSnapshotReceivedFor = null;
+
             listUnsubscribe = db.collection('lists').doc(listId).onSnapshot((doc) => {
                 if (!doc.exists) return;
 
+                const isFromCache = doc.metadata && doc.metadata.fromCache;
+                const hasPendingWrites = doc.metadata && doc.metadata.hasPendingWrites;
+
                 // Protéger les changements locaux non sauvés contre l'écrasement par un snapshot distant
-                if (pendingLocalChanges && !doc.metadata.hasPendingWrites) {
+                if (pendingLocalChanges && !hasPendingWrites) {
                     console.log('⏳ onSnapshot ignoré : changements locaux en attente');
                     return;
                 }
 
                 const data = doc.data();
                 pendingLocalChanges = false; // Le snapshot distant est maintenant notre état de référence
+
+                // Marquer qu'on a reçu un snapshot serveur (PAS un snapshot de cache) pour cette liste.
+                // Tant que ce n'est pas fait, saveToFirebase refusera d'écrire pour éviter
+                // d'écraser le serveur avec l'état mémoire initial (vide ou périmé).
+                if (!isFromCache) {
+                    serverSnapshotReceivedFor = listId;
+                }
 
                 if (data.groceryList) {
                     groceryList = data.groceryList;
@@ -2519,6 +2533,24 @@
             db = firebase.firestore();
             auth = firebase.auth();
             auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
+            // Persistance offline Firestore : les écritures sont mises en file
+            // dans IndexedDB instantanément, puis rejouées en background vers
+            // le serveur. Même si l'app est tuée par l'OS pendant un write,
+            // celui-ci est garanti d'arriver au prochain lancement.
+            // C'est LE mécanisme qui empêche les pertes de données.
+            db.enablePersistence({ synchronizeTabs: true })
+                .then(() => console.log('✅ Persistance Firestore activée'))
+                .catch((err) => {
+                    if (err.code === 'failed-precondition') {
+                        console.warn('⚠️ Persistance : plusieurs onglets sans synchronizeTabs');
+                    } else if (err.code === 'unimplemented') {
+                        console.warn('⚠️ Persistance : non supportée par ce navigateur');
+                    } else {
+                        console.warn('⚠️ Persistance non activée :', err);
+                    }
+                });
+
             console.log('✅ Firebase initialisé');
         } catch (error) {
             console.error('❌ Erreur Firebase:', error);
@@ -2837,22 +2869,19 @@
         }
 
         let pendingLocalChanges = false; // True quand des changements locaux n'ont pas encore été sauvés sur Firebase
+        let serverSnapshotReceivedFor = null; // listId pour lequel on a reçu au moins un snapshot serveur (PAS du cache)
 
-        // Récupérer une sauvegarde interrompue (ex: app fermée sur mobile avant que Firebase ait reçu le write)
+        // [Neutralisé] Cette fonction écrivait l'état EN MÉMOIRE à Firestore au démarrage,
+        // ce qui pouvait écraser les données serveur avec un état initial vide ou périmé
+        // si l'onSnapshot n'avait pas encore tiré. Avec la persistance Firestore offline
+        // (enablePersistence) activée, le SDK met lui-même les écritures en file dans
+        // IndexedDB et les rejoue automatiquement à la prochaine connexion : aucune
+        // logique de "récupération de sauvegarde interrompue" n'est nécessaire côté app.
         function checkPendingSave() {
-            const pendingSave = localStorage.getItem('pendingSave');
-            const pendingSaveTime = localStorage.getItem('pendingSaveTime');
-            if (pendingSave && pendingSaveTime) {
-                const age = Date.now() - parseInt(pendingSaveTime);
-                // Seulement si < 5 minutes (éviter les données périmées)
-                if (age < 5 * 60 * 1000 && dataLoaded && isFirebaseReady) {
-                    console.log('🔄 Récupération sauvegarde interrompue (' + Math.round(age / 1000) + 's)');
-                    pendingLocalChanges = true;
-                    saveToFirebase();
-                }
-                localStorage.removeItem('pendingSave');
-                localStorage.removeItem('pendingSaveTime');
-            }
+            // Nettoyer les anciennes clés (issues de versions précédentes) pour ne pas
+            // qu'elles re-déclenchent un comportement obsolète.
+            localStorage.removeItem('pendingSave');
+            localStorage.removeItem('pendingSaveTime');
         }
 
         // Sauvegarde locale uniquement (état d'affichage — pas de sync Firebase)
@@ -2888,6 +2917,15 @@
             if (!isFirebaseReady || !db || !userId) {
                 console.warn('⚠️ saveToFirebase bloqué: isFirebaseReady=' + isFirebaseReady + ', db=' + !!db + ', userId=' + !!userId);
                 updateSyncStatus('offline');
+                return;
+            }
+            // GARDE CRITIQUE : refuser d'écrire sur une liste partagée tant qu'on n'a pas
+            // confirmé l'état serveur via un snapshot. Sinon on risque d'écraser Firestore
+            // avec un état mémoire vide ou périmé (cas typique : app vient d'ouvrir,
+            // onSnapshot pas encore arrivé, mais checkPendingSave ou autre déclenche un write).
+            if (activeListId && serverSnapshotReceivedFor !== activeListId) {
+                console.warn('🚫 saveToFirebase bloqué : pas encore de snapshot serveur pour cette liste partagée. État mémoire potentiellement périmé.');
+                updateSyncStatus('syncing');
                 return;
             }
 
@@ -5421,6 +5459,12 @@
         // Sauvegarde forcée — utilisée par beforeunload et visibilitychange
         function forceSaveToFirebase() {
             if (!isFirebaseReady || !db || !userId) return;
+            // Même garde que saveToFirebase : ne JAMAIS écrire sur une liste partagée
+            // sans avoir confirmé l'état serveur via un snapshot.
+            if (activeListId && serverSnapshotReceivedFor !== activeListId) {
+                console.warn('🚫 forceSaveToFirebase bloqué : pas encore de snapshot serveur');
+                return;
+            }
             const dataToSave = {
                 groceryList: groceryList,
                 meals: meals,
@@ -5444,9 +5488,8 @@
             if (!dataLoaded) return;
             if (pendingLocalChanges) {
                 forceSaveToFirebase();
-                // Fallback localStorage en cas d'échec du write Firebase
-                localStorage.setItem('pendingSave', 'true');
-                localStorage.setItem('pendingSaveTime', Date.now().toString());
+                // Avec la persistance Firestore activée, l'écriture est instantanément
+                // queuée dans IndexedDB par le SDK : pas besoin de flag de récupération.
                 console.log('💾 Sauvegarde forcée avant fermeture');
             } else if (isFirebaseReady && activeListId && userId) {
                 // Marquer comme hors-ligne même sans sauvegarde en attente
@@ -5461,9 +5504,7 @@
             if (document.visibilityState === 'hidden' && dataLoaded) {
                 if (pendingLocalChanges) {
                     forceSaveToFirebase();
-                    // Fallback localStorage en cas d'échec du write Firebase
-                    localStorage.setItem('pendingSave', 'true');
-                    localStorage.setItem('pendingSaveTime', Date.now().toString());
+                    // Persistance Firestore : SDK queue le write dans IndexedDB.
                     console.log('💾 Sauvegarde forcée (app en arrière-plan)');
                 } else if (isFirebaseReady && activeListId && userId) {
                     db.collection('lists').doc(activeListId).update({
