@@ -341,10 +341,21 @@
         }
 
         .drag-handle {
-            margin-right: 8px;
+            margin-right: 4px;
             color: #6c757d;
             cursor: move;
             font-size: 18px;
+            padding: 6px 8px;
+            touch-action: none; /* indispensable pour SortableJS sur mobile */
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .section-drag-handle {
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            padding: 6px 8px;
+            cursor: move;
         }
 
         .item-name {
@@ -691,6 +702,7 @@
             justify-content: space-between;
             margin-bottom: 15px;
             gap: 8px;
+            flex-wrap: wrap;
         }
 
         .meals-title {
@@ -905,6 +917,19 @@
             display: flex;
             gap: 8px;
             align-items: center;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        @media (max-width: 600px) {
+            .meals-header-buttons {
+                margin-left: 0 !important;
+                width: 100%;
+                justify-content: flex-start;
+            }
+            .ai-suggest-btn .ai-suggest-label-long { display: none; }
+        }
+        @media (min-width: 601px) {
+            .ai-suggest-btn .ai-suggest-label-short { display: none; }
         }
 
         .add-section-btn {
@@ -1407,7 +1432,7 @@
                 </div>
                 <span class="category-chevron" id="mealsChevron" style="font-size: 12px; transition: transform 0.3s; color: #999;">▼</span>
                 <div class="meals-header-buttons" style="margin-left: auto;">
-                    <button class="ai-suggest-btn" onclick="event.stopPropagation(); openAiSuggestModal()" title="Suggestions de plats de saison par IA">🤖 Plats de saison</button>
+                    <button class="ai-suggest-btn" onclick="event.stopPropagation(); openAiSuggestModal()" title="Suggestions de plats de saison par IA"><span class="ai-suggest-label-long">🤖 Plats de saison</span><span class="ai-suggest-label-short">🤖 Saison</span></button>
                     <button class="add-section-btn" onclick="event.stopPropagation(); openCreateSectionModal()" title="Nouvelle section">+ Section</button>
                     <button class="add-meal-btn" onclick="event.stopPropagation(); openMealModal()">+ Nouveau plat</button>
                 </div>
@@ -1415,7 +1440,7 @@
             <div class="meals-controls" id="mealsControls">
                 <div class="meals-search-row">
                     <div class="search-wrapper">
-                        <input type="text" class="meals-search-box" id="mealsSearchBox" placeholder="🔍 Rechercher un plat...">
+                        <input type="text" class="meals-search-box" id="mealsSearchBox" placeholder="🔍 Rechercher un plat..." autocomplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other">
                         <button class="search-clear-btn" id="mealsSearchClearBtn" title="Effacer la recherche">✕</button>
                     </div>
                     <button class="collapse-all-btn" id="mealsCollapseAllBtn" onclick="toggleAllMealSections()" title="Replier/Déplier tout">
@@ -1441,7 +1466,7 @@
                 <div class="controls">
                     <div class="search-row">
                         <div class="search-wrapper">
-                            <input type="text" class="search-box" id="searchBox" placeholder="🔍 Rechercher un article...">
+                            <input type="text" class="search-box" id="searchBox" placeholder="🔍 Rechercher un article..." autocomplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other">
                             <button class="search-clear-btn" id="searchClearBtn" title="Effacer la recherche">✕</button>
                         </div>
                         <button class="collapse-all-btn" id="collapseAllBtn" onclick="toggleAllCategories()" title="Replier/Déplier tout">
@@ -1488,7 +1513,7 @@
     <div id="renameModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">Renommer l'article</div>
-            <input type="text" class="rename-input" id="renameInput" placeholder="Nouveau nom...">
+            <input type="text" class="rename-input" id="renameInput" placeholder="Nouveau nom..." autocomplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other">
             <div class="modal-buttons">
                 <button class="modal-confirm" onclick="confirmRename()">Confirmer</button>
                 <button class="modal-cancel" onclick="closeRenameModal()">Annuler</button>
@@ -1501,7 +1526,7 @@
         <div class="modal-content">
             <div class="modal-header">Quantité</div>
             <p style="color: #666; font-size: 14px; margin-bottom: 15px;" id="quantityItemName">Article</p>
-            <input type="text" class="rename-input" id="quantityInput" placeholder="Ex: 7, 2kg, 500g...">
+            <input type="text" class="rename-input" id="quantityInput" placeholder="Ex: 7, 2kg, 500g..." autocomplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other">
             <p style="font-size: 12px; color: #999; margin: 10px 0;">💡 Exemples : x7, 2, 1kg, 500g, 2L</p>
             <div class="modal-buttons">
                 <button class="modal-confirm" onclick="confirmQuantity()">Confirmer</button>
@@ -1515,7 +1540,7 @@
     <div id="addArticleModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">Ajouter un article</div>
-            <input type="text" class="rename-input" id="modalArticleName" placeholder="Nom de l'article..." style="margin-bottom: 15px;">
+            <input type="text" class="rename-input" id="modalArticleName" placeholder="Nom de l'article..." style="margin-bottom: 15px;" autocomplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other">
             <select class="rename-input" id="modalArticleCategory" style="margin-bottom: 15px; height: 45px;">
                 <option value="">Sélectionnez une section...</option>
             </select>
@@ -1530,7 +1555,7 @@
     <div id="mealModal" class="modal">
         <div class="modal-content meal-modal-content">
             <div class="modal-header" id="mealModalHeader">Créer un nouveau plat</div>
-            <input type="text" class="rename-input" id="mealNameInput" placeholder="Nom du plat...">
+            <input type="text" class="rename-input" id="mealNameInput" placeholder="Nom du plat..." autocomplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other">
             <select class="rename-input" id="mealSectionSelect" style="margin-bottom: 15px; height: 45px;">
                 <option value="">Aucune section</option>
             </select>
@@ -1548,11 +1573,12 @@
             <div class="modal-header">🤖 Plats de saison</div>
 
             <label class="ai-field-label" for="aiCount">Nombre de plats à proposer</label>
-            <input type="number" class="rename-input" id="aiCount" min="1" max="15" value="5" style="margin-bottom: 16px;">
+            <input type="number" class="rename-input" id="aiCount" min="1" max="15" value="5" style="margin-bottom: 16px;" autocomplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other">
 
             <label class="ai-field-label" for="aiRecommendations">Recommandations (optionnel)</label>
             <input type="text" class="rename-input" id="aiRecommendations"
                    placeholder="Ex: plats asiatiques, du poisson, végétarien..."
+                   autocomplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other"
                    onkeydown="if(event.key==='Enter') generateAiSuggestions();"
                    style="margin-bottom: 4px;">
             <p class="ai-context-hint">Ces consignes sont ajoutées aux instructions de l'IA.</p>
@@ -1599,7 +1625,7 @@
                 <button type="button" class="emoji-option" onclick="selectSectionEmoji('❤️', this)">❤️</button>
             </div>
             <input type="hidden" id="sectionEmojiValue" value="📁">
-            <input type="text" class="rename-input" id="mealSectionNameInput" placeholder="Nom de la section...">
+            <input type="text" class="rename-input" id="mealSectionNameInput" placeholder="Nom de la section..." autocomplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other">
             <div class="modal-buttons">
                 <button class="modal-confirm" id="mealSectionConfirmBtn" onclick="confirmMealSection()">Créer</button>
                 <button class="modal-cancel" onclick="closeMealSectionModal()">Annuler</button>
@@ -1645,7 +1671,7 @@
                 <button type="button" class="emoji-option" onclick="selectArticleSectionEmoji('❤️', this)">❤️</button>
             </div>
             <input type="hidden" id="articleSectionEmojiValue" value="📁">
-            <input type="text" class="rename-input" id="articleSectionNameInput" placeholder="Nom de la section...">
+            <input type="text" class="rename-input" id="articleSectionNameInput" placeholder="Nom de la section..." autocomplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other">
             <div class="modal-buttons">
                 <button class="modal-confirm" id="articleSectionConfirmBtn" onclick="confirmCreateArticleSection()">Créer</button>
                 <button class="modal-cancel" onclick="closeArticleSectionModal()">Annuler</button>
@@ -1750,6 +1776,7 @@
                         <div style="display:flex; gap:6px; align-items:center;">
                             <input type="text" id="renameListInput"
                                    placeholder="Nouveau nom de la liste"
+                                   autocomplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other"
                                    onkeydown="if(event.key==='Enter') saveRenameList(); if(event.key==='Escape') cancelRenameList();"
                                    style="flex:1; padding:7px 10px; border:2px solid #667eea; border-radius:6px; font-size:14px; outline:none;">
                             <button onclick="saveRenameList()" title="Valider" style="padding:6px 11px; background:#667eea; color:white; border:none; border-radius:6px; cursor:pointer; font-size:15px; font-weight:bold;">✓</button>
@@ -1781,7 +1808,7 @@
                         🔗 Créer une liste partagée
                     </button>
                     <div style="display:flex; gap:8px;">
-                        <input type="text" id="joinCodeInput" placeholder="Code (ex: ABC123)" maxlength="6"
+                        <input type="text" id="joinCodeInput" placeholder="Code (ex: ABC123)" maxlength="6" autocomplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other"
                                style="flex:1; padding:10px; border:2px solid #e9ecef; border-radius:8px; font-size:15px; text-transform:uppercase; letter-spacing:2px; text-align:center;">
                         <button onclick="joinSharedList()" class="modal-confirm" style="white-space:nowrap;">Rejoindre</button>
                     </div>
@@ -1792,7 +1819,7 @@
                     <p style="margin:0 0 8px; color:#6a5acd; font-weight:600;">🤖 Clé API Gemini</p>
                     <p style="font-size:12px; color:#666; margin:0 0 10px;">Nécessaire pour les suggestions de plats de saison. Stockée uniquement sur cet appareil.</p>
                     <div style="display:flex; gap:8px;">
-                        <input type="password" id="geminiApiKeyInput" placeholder="Coller votre clé API..." autocomplete="off"
+                        <input type="password" id="geminiApiKeyInput" placeholder="Coller votre clé API..." autocomplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other"
                                style="flex:1; min-width:0; padding:10px; border:2px solid #e9ecef; border-radius:8px; font-size:14px;">
                         <button onclick="saveGeminiApiKey()" class="modal-confirm" style="white-space:nowrap;">Enregistrer</button>
                     </div>
@@ -4992,10 +5019,10 @@
             animation: 150,
             easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
             handle: '.drag-handle',
-            delay: 120,
+            delay: 180,
             delayOnTouchOnly: true,
-            touchStartThreshold: 5,
-            fallbackTolerance: 5,
+            touchStartThreshold: 20, // tolérance au jitter du doigt pendant le delay
+            fallbackTolerance: 10,
             forceFallback: true,   // rendu cohérent du ghost sur tous les navigateurs
             scroll: true,
             scrollSensitivity: 60,
